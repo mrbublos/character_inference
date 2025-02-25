@@ -26,6 +26,7 @@ from torch._inductor import config as ind_config
 
 config.cache_size_limit = 10000000000
 ind_config.shape_padding = True
+config.suppress_errors = True
 import platform
 
 from loguru import logger
@@ -153,6 +154,7 @@ class FluxPipeline:
         lora_path: Union[str, OrderedDict[str, torch.Tensor]],
         scale: float,
         name: Optional[str] = None,
+        silent=False
     ):
         """
         Loads a LoRA checkpoint into the Flux flow transformer.
@@ -165,16 +167,16 @@ class FluxPipeline:
             scale (float): Scaling factor for the LoRA weights.
             name (str): Name of the LoRA checkpoint, optionally can be left as None, since it only acts as an identifier.
         """
-        self.model.load_lora(path=lora_path, scale=scale, name=name)
+        self.model.load_lora(path=lora_path, scale=scale, name=name, silent=silent)
 
-    def unload_lora(self, path_or_identifier: str):
+    def unload_lora(self, path_or_identifier: str, silent=False):
         """
         Unloads the LoRA checkpoint from the Flux flow transformer.
 
         Args:
             path_or_identifier (str): Path to the LoRA checkpoint or the name given to the LoRA checkpoint when it was loaded.
         """
-        self.model.unload_lora(path_or_identifier=path_or_identifier)
+        self.model.unload_lora(path_or_identifier=path_or_identifier, silent=silent)
 
     @torch.inference_mode()
     def compile(self):

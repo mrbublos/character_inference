@@ -181,9 +181,7 @@ def convert_diffusers_to_flux_transformer_checkpoint(
                     dtype = sample_component_A.dtype
                     device = sample_component_A.device
             else:
-                logger.info(
-                    f"Skipping layer {i} since no LoRA weight is available for {sample_component_A_key}"
-                )
+                logger.info(f"Skipping layer {i} since no LoRA weight is available for {sample_component_A_key}")
                 temp_dict[f"{component}"] = [None, None]
 
         if device is not None:
@@ -344,30 +342,26 @@ def convert_diffusers_to_flux_transformer_checkpoint(
         shape_qkv_a = None
         shape_qkv_b = None
         # Q, K, V, mlp
-        q_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_q.lora_A.weight")
-        q_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_q.lora_B.weight")
+        q_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_q.lora_A.weight", None)
+        q_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_q.lora_B.weight", None)
         if q_A is not None and q_B is not None:
             has_q = True
             shape_qkv_a = q_A.shape
             shape_qkv_b = q_B.shape
-        k_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_k.lora_A.weight")
-        k_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_k.lora_B.weight")
+        k_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_k.lora_A.weight", None)
+        k_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_k.lora_B.weight", None)
         if k_A is not None and k_B is not None:
             has_k = True
             shape_qkv_a = k_A.shape
             shape_qkv_b = k_B.shape
-        v_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_v.lora_A.weight")
-        v_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_v.lora_B.weight")
+        v_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_v.lora_A.weight", None)
+        v_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}attn.to_v.lora_B.weight", None)
         if v_A is not None and v_B is not None:
             has_v = True
             shape_qkv_a = v_A.shape
             shape_qkv_b = v_B.shape
-        mlp_A = diffusers_state_dict.pop(
-            f"{prefix}{block_prefix}proj_mlp.lora_A.weight"
-        )
-        mlp_B = diffusers_state_dict.pop(
-            f"{prefix}{block_prefix}proj_mlp.lora_B.weight"
-        )
+        mlp_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}proj_mlp.lora_A.weight", None)
+        mlp_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}proj_mlp.lora_B.weight", None)
         if mlp_A is not None and mlp_B is not None:
             has_mlp = True
             shape_qkv_a = mlp_A.shape
@@ -637,6 +631,7 @@ def apply_lora_to_model(
     lora_path: str | StateDict,
     lora_scale: float = 1.0,
     return_lora_resolved: bool = False,
+    silent=False
 ) -> Flux:
     has_guidance = model.params.guidance_embed
     logger.info(f"Loading LoRA weights for {lora_path}")
@@ -675,7 +670,7 @@ def apply_lora_to_model(
                 ]
             )
         )
-    for key in tqdm(keys_without_ab, desc="Applying LoRA", total=len(keys_without_ab)):
+    for key in tqdm(keys_without_ab, desc="Applying LoRA", total=len(keys_without_ab), disable=silent):
         module = get_module_for_key(key, model)
         weight, is_f8, dtype = extract_weight_from_linear(module)
         lora_sd = get_lora_for_key(key, lora_weights)
@@ -697,6 +692,7 @@ def remove_lora_from_module(
     model: Flux,
     lora_path: str | StateDict,
     lora_scale: float = 1.0,
+    silent=False
 ):
     has_guidance = model.params.guidance_embed
     logger.info(f"Loading LoRA weights for {lora_path}")
@@ -737,7 +733,7 @@ def remove_lora_from_module(
             )
         )
 
-    for key in tqdm(keys_without_ab, desc="Unfusing LoRA", total=len(keys_without_ab)):
+    for key in tqdm(keys_without_ab, desc="Unfusing LoRA", total=len(keys_without_ab), disable=silent):
         module = get_module_for_key(key, model)
         weight, is_f8, dtype = extract_weight_from_linear(module)
         lora_sd = get_lora_for_key(key, lora_weights)
