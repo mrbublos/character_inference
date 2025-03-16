@@ -91,7 +91,7 @@ if __name__ == "__main__":
         adap_trigger_path = os.path.join(os.path.dirname(path), name + '.txt')
         adap_trigger = ""
         if os.path.exists(adap_trigger_path):
-            with open(adap_trigger_path, 'r', 'utf-8') as f:
+            with open(adap_trigger_path, 'r') as f:
                 adap_trigger = f.read()
 
         pipe.model.load_lora(path, 1.0, name, silent=True)
