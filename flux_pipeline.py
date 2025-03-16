@@ -71,7 +71,7 @@ class FluxPipeline:
         t5: "HFEmbedder" = None,
         model: "Flux" = None,
         ae: "AutoEncoder" = None,
-        dtype: torch.dtype = torch.float16,
+        dtype: torch.dtype = torch.bfloat16,
         verbose: bool = False,
         flux_device: torch.device | str = "cuda:0",
         ae_device: torch.device | str = "cuda:1",

@@ -100,39 +100,19 @@ class F8Linear(nn.Module):
     ):
         sd = {k.replace(prefix, ""): v for k, v in state_dict.items()}
         if "weight" in sd:
-            if (
-                "float8_data" not in sd
-                or sd["float8_data"] is None
-                and sd["weight"].shape == (self.out_features, self.in_features)
-            ):
+            if ("float8_data" not in sd or sd["float8_data"] is None and sd["weight"].shape == (self.out_features, self.in_features)):
                 # Initialize as if it's an F8Linear that needs to be quantized
-                self._parameters["weight"] = nn.Parameter(
-                    sd["weight"], requires_grad=False
-                )
+                self._parameters["weight"] = nn.Parameter(sd["weight"], requires_grad=False)
                 if "bias" in sd:
-                    self._parameters["bias"] = nn.Parameter(
-                        sd["bias"], requires_grad=False
-                    )
+                    self._parameters["bias"] = nn.Parameter(sd["bias"], requires_grad=False)
                 self.quantize_weight()
-            elif sd["float8_data"].shape == (
-                self.out_features,
-                self.in_features,
-            ) and sd["weight"] == torch.zeros_like(sd["weight"]):
+            elif sd["float8_data"].shape == (self.out_features, self.in_features,) and sd["weight"] == torch.zeros_like(sd["weight"]):
                 w = sd["weight"]
                 # Set the init values as if it's already quantized float8_data
                 self._buffers["float8_data"] = sd["float8_data"]
-                self._parameters["weight"] = nn.Parameter(
-                    torch.zeros(
-                        1,
-                        dtype=w.dtype,
-                        device=w.device,
-                        requires_grad=False,
-                    )
-                )
+                self._parameters["weight"] = nn.Parameter(torch.zeros(1, dtype=w.dtype, device=w.device, requires_grad=False, ))
                 if "bias" in sd:
-                    self._parameters["bias"] = nn.Parameter(
-                        sd["bias"], requires_grad=False
-                    )
+                    self._parameters["bias"] = nn.Parameter(sd["bias"], requires_grad=False)
                 self.weight_initialized = True
 
                 # Check if scales and reciprocals are initialized

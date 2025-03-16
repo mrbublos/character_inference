@@ -66,7 +66,7 @@ class ModelSpec(BaseModel):
     offload_text_encoder: bool = False
     offload_vae: bool = False
     offload_flow: bool = False
-    prequantized_flow: bool = False
+    prequantized_flow: bool = False  # TODO make quantized model
 
     # Improved precision via not quanitzing the modulation linear layers
     quantize_modulation: bool = True

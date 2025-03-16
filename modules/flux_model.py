@@ -508,7 +508,7 @@ class Flux(nn.Module):
     Transformer model for flow matching on sequences.
     """
 
-    def __init__(self, config: "ModelSpec", dtype: torch.dtype = torch.float16):
+    def __init__(self, config: "ModelSpec", dtype: torch.dtype = torch.bfloat16):
         super().__init__()
 
         self.dtype = dtype
@@ -538,17 +538,10 @@ class Flux(nn.Module):
             axes_dim=config.params.axes_dim,
             dtype=self.dtype,
         )
-        self.img_in = (
-            nn.Linear(self.in_channels, self.hidden_size, bias=True)
-            if not prequantized_flow
-            else (
-                F8Linear(
-                    in_features=self.in_channels,
-                    out_features=self.hidden_size,
-                    bias=True,
-                )
+        self.img_in = (nn.Linear(self.in_channels, self.hidden_size, bias=True, dtype=self.dtype) if not prequantized_flow
+                       else (F8Linear(in_features=self.in_channels, out_features=self.hidden_size, bias=True,)
                 if quantized_embedders
-                else nn.Linear(self.in_channels, self.hidden_size, bias=True)
+                else nn.Linear(self.in_channels, self.hidden_size, bias=True, dtype=self.dtype)
             )
         )
         self.time_in = MLPEmbedder(
@@ -574,7 +567,7 @@ class Flux(nn.Module):
             else nn.Identity()
         )
         self.txt_in = (
-            nn.Linear(config.params.context_in_dim, self.hidden_size)
+            nn.Linear(config.params.context_in_dim, self.hidden_size, dtype=self.dtype)
             if not quantized_embedders
             else (
                 F8Linear(
@@ -583,7 +576,7 @@ class Flux(nn.Module):
                     bias=True,
                 )
                 if quantized_embedders
-                else nn.Linear(config.params.context_in_dim, self.hidden_size)
+                else nn.Linear(config.params.context_in_dim, self.hidden_size, dtype=self.dtype)
             )
         )
 
