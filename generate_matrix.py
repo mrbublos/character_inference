@@ -99,7 +99,7 @@ if __name__ == "__main__":
         prog.set_description(name)
 
         for prompt in prompts:
-            prompt = adap_trigger + prompt
+            prompt = adap_trigger + ' ' + prompt
             output_jpeg_bytes = pipe.generate(prompt=prompt, width=matrix_config['width'], height=matrix_config['height'],
                                               num_steps=matrix_config['sample_steps'], guidance=4, seed=None, silent=True)
             adapter_images.append(output_jpeg_bytes)
