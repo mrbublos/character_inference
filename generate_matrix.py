@@ -71,8 +71,8 @@ if __name__ == "__main__":
 
     # -------------- Matrix generation
     print('Loading model')
-    # pipe = FluxPipeline.load_pipeline_from_config_path("configs/config-dev-H100.json")
-    pipe = FluxPipeline.load_pipeline_from_config_path("configs/config-dev-offload-3-4090.json")
+    pipe = FluxPipeline.load_pipeline_from_config_path("configs/config-dev-H100.json")
+    # pipe = FluxPipeline.load_pipeline_from_config_path("configs/config-dev-offload-3-4090.json")
     # character Lora
     lora_path = os.path.join(config['process'][0]['training_folder'], config['name'], config['name'] + '.safetensors')
     trigger = config['process'][0]['trigger_word']
