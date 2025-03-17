@@ -44,7 +44,7 @@
   "text_enc_device": "cuda:0",
   "ae_device": "cuda:0",
   "flux_device": "cuda:0",
-  "flow_dtype": "bfloat16",
+  "flow_dtype": "float16",
   "ae_dtype": "bfloat16",
   "text_enc_dtype": "bfloat16",
   "flow_quantization_dtype": "qfloat8",
@@ -55,5 +55,5 @@
   "offload_text_encoder": false,
   "offload_vae": false,
   "offload_flow": false,
-  "prequantized_flow": false
+  "prequantized_flow": true
 }

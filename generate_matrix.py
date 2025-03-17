@@ -6,6 +6,11 @@ from tqdm.auto import tqdm
 from argparse import ArgumentParser
 
 
+Font = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
+if os.name == 'nt':
+    Font = "arial.ttf"
+
+
 def concat_images(img_list):
     "img_list: 2 dim array, 0 dim - images in rows, 1 dim - images in columns"
     cols = max([len(i) for i in img_list])
@@ -20,7 +25,7 @@ def concat_images(img_list):
 def add_titles_concat_images(titles, concat_images):
     side = Image.new('RGB', (700 + concat_images.width, 1030 * len(titles) - 6))
     draw = ImageDraw.Draw(side)
-    font = ImageFont.truetype("arial.ttf", 80)
+    font = ImageFont.truetype(Font, 80)
     for i, title in enumerate(titles):
         draw.text((5, 1030 * i + 1030 / 2), title, (255,255,255), font=font)
     side.paste(concat_images, (700, 0))
@@ -29,7 +34,7 @@ def add_titles_concat_images(titles, concat_images):
 def matrix_titles_images(row_titles, col_titles, concat_images, row_name="", col_name=""):
     side = Image.new('RGB', (500 + concat_images.width, 100 + concat_images.height))
     draw = ImageDraw.Draw(side)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf", 70, encoding="unic")
+    font = ImageFont.truetype(Font, 70, encoding="unic")
     draw.text((5, 200), str(row_name) + ":", (255,255,255), font=font)
     draw.text((300, 15), str(col_name) + ":", (255,255,255), font=font)
     for i, title in enumerate(row_titles):
