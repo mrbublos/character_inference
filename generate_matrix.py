@@ -6,7 +6,7 @@ from tqdm.auto import tqdm
 from argparse import ArgumentParser
 
 
-Font = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
+Font = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
 if os.name == 'nt':
     Font = "arial.ttf"
 
