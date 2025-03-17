@@ -1,0 +1,15 @@
+einops
+PyTurboJPEG
+pydantic
+fastapi
+bitsandbytes
+loguru
+transformers
+tokenizers
+sentencepiece
+click
+accelerate
+quanto
+pydash
+pybase64
+uvicorn
