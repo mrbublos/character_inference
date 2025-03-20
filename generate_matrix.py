@@ -95,9 +95,11 @@ if __name__ == "__main__":
     trigger = config['process'][0].get('trigger_word', "")
     pipe.model.load_lora(lora_path, 1.0, "User")
 
-    # additional Loras
+    # additional permanent Lora effects
     additional_triggers = []
-    for additional_lora in matrix_config.get('permanent_adapter_paths', []):
+    permanent_adapter_paths = matrix_config.get('permanent_adapter_paths', [])
+    permanent_adapter_paths = permanent_adapter_paths if isinstance(permanent_adapter_paths, list) else []
+    for additional_lora in permanent_adapter_paths:
         if not os.path.exists(additional_lora):
             continue
         name = os.path.basename(additional_lora).split(('.safet'))[0]
@@ -167,8 +169,21 @@ if __name__ == "__main__":
 
     # second type of matrix
     elif args.mode == '2':
-        adapter_names = []
-        prog = tqdm(total=len(prompts) * len(matrix_config['adapter_paths']))
+        adapter_names = ["Base"]
+        prog = tqdm(total=len(prompts) * (len(matrix_config['adapter_paths']) + 1))
+        adapter_images = []
+        # Base Model + character
+        prog.set_description("Base")
+        for prompt in prompts:
+            prompt_ = (additional_triggers + ' ' + prompt).strip()
+            output_jpeg_bytes = pipe.generate(prompt=prompt_, width=width, height=height,
+                                              num_steps=matrix_config.get('sample_steps', 50), guidance=4, seed=None,
+                                              silent=True)
+            adapter_images.append(output_jpeg_bytes)
+            prog.update()
+        gen_images.append(adapter_images)
+
+
         for adap in range(len(matrix_config.get('adapter_paths', []))):
             adapter_images = []
             path = matrix_config['adapter_paths'][adap]
@@ -186,8 +201,8 @@ if __name__ == "__main__":
             prog.set_description(name)
 
             for prompt in prompts:
-                prompt = adap_trigger + ' ' + prompt
-                output_jpeg_bytes = pipe.generate(prompt=prompt, width=width, height=height,
+                prompt_ = adap_trigger + ' ' + prompt
+                output_jpeg_bytes = pipe.generate(prompt=prompt_, width=width, height=height,
                                             num_steps=matrix_config.get('sample_steps', 50), guidance=4, seed=None, silent=True)
                 adapter_images.append(output_jpeg_bytes)
                 prog.update()
