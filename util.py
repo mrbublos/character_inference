@@ -7,6 +7,7 @@ from modules.autoencoder import AutoEncoder, AutoEncoderParams
 from modules.conditioner import HFEmbedder
 from modules.flux_model import Flux, FluxParams
 from safetensors.torch import load_file as load_sft
+import safetensors
 
 try:
     from enum import StrEnum
@@ -248,7 +249,10 @@ def load_flow_model(config: ModelSpec) -> Flux:
 
     if ckpt_path is not None:
         # load_sft doesn't support torch.device
-        sd = load_sft(ckpt_path, device="cpu")
+        # sd = load_sft(ckpt_path, device="cpu")
+        with open(ckpt_path, 'rb') as f:
+            buffer = f.read()
+            sd = safetensors.torch.load(buffer)
         missing, unexpected = model.load_state_dict(sd, strict=False, assign=True)
         print_load_warning(missing, unexpected)
         if not config.prequantized_flow:

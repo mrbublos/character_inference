@@ -1,9 +1,16 @@
 einops
 PyTurboJPEG
+huggingface_hub
+annotated_types
+typing_inspection
+pydantic_core
 pydantic
+starlette
 fastapi
 bitsandbytes
 loguru
+regex
+safetensors
 transformers
 tokenizers
 sentencepiece
@@ -13,3 +20,4 @@ quanto
 pydash
 pybase64
 uvicorn
+optimum-quanto==0.2.5
