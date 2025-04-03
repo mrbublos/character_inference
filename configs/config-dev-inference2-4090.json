@@ -34,7 +34,7 @@
     "scale_factor": 0.3611,
     "shift_factor": 0.1159
   },
-  "ckpt_path": "/workspace/hf/Flux_dev/transformer/flux1-dev-for_inf-fp8-e4m3fn.safetensors",
+  "ckpt_path": "/workspace/hf/Flux_dev/transformer/flux1-dev.safetensors",
   "ae_path": "/workspace/hf/Flux_dev/ae/ae.safetensors",
   "repo_id": "black-forest-labs/FLUX.1-dev",
   "repo_flow": "flux1-dev.sft",
@@ -55,5 +55,5 @@
   "offload_text_encoder": true,
   "offload_vae": true,
   "offload_flow": false,
-  "prequantized_flow": true
+  "prequantized_flow": false
 }

@@ -1,6 +1,7 @@
 import os
 from collections import namedtuple
 from typing import TYPE_CHECKING, List
+import gc
 
 import torch
 from loguru import logger
@@ -643,6 +644,8 @@ class Flux(nn.Module):
                         break
         else:
             _, lora = apply_lora_to_model(self, path, scale, return_lora_resolved=True, silent=silent)
+            gc.collect()
+            torch.cuda.empty_cache()
             self.loras.append(LoraWeights(lora, path, name, scale))
 
     def unload_lora(self, path_or_identifier: str, silent=False):
@@ -661,6 +664,9 @@ class Flux(nn.Module):
             )
         else:
             logger.info("Successfully removed lora from module.")
+        gc.collect()
+        torch.cuda.empty_cache()
+
 
     def forward(
         self,

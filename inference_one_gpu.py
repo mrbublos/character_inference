@@ -1,7 +1,7 @@
 import argparse
 import uvicorn
 from api_one_gpu import app, STYLES_FOLDER
-from util import load_config_from_path
+
 import os
 
 
@@ -20,8 +20,12 @@ def main():
     # lazy loading so cli returns fast instead of waiting for torch to load modules
     from flux_pipeline import FluxPipeline
 
-    config = load_config_from_path(args.config_path)
-    app.state.model = FluxPipeline.load_pipeline_from_config(config)
+    app.state.model = FluxPipeline.load_pipeline_from_config_path(args.config_path)
+    print('warmup')
+    warmup_dict = dict(
+        prompt="A beautiful test image used to solidify the fp8 nn.Linear input scales prior to compilation 😉",
+        height=768, width=768, num_steps=2, guidance=3.5, seed=10, )
+    app.state.model.generate(**warmup_dict)
 
     uvicorn.run(app, host=args.host, port=args.port)
 
