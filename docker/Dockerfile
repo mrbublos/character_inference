@@ -29,7 +29,7 @@ ENV CUDA_HOME='/usr/local/cuda'
 
 ENV HF_HOME="/workspace/hf"
 ENV HF_HUB_CACHE="/workspace/hf"
-ENV GPU_NUM=1
+ENV NUM_GPUS=1
 
 # Important paths
 # dir for saving Lora styles
@@ -39,11 +39,11 @@ EXPOSE 8088
 
 WORKDIR /app/character_inference
 # RUN ["chmod", "+x", "/app/character_inference/start_inference.sh"]
-CMD ["python3 inference_one_gpu.py --port 8088 --host 0.0.0.0 --config-path configs/config-dev-inference-4090.json"]
+CMD ["python3 inference_hf.py --port 8088 --host 0.0.0.0 --config-path configs/config-dev-inference-4090.json"]
 
 # run container important params:
     # --gpus=all  - give access to gpus
-    # -e GPU_NUM=_number of GPUs, default 1
+    # -e NUM_GPUS=_number of GPUs, default 1
     # -p _port_:8088  - map port
     # -v /workspace/hf  - dir for models
 

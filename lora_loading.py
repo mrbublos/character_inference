@@ -552,6 +552,7 @@ def unfuse_lora_weight_from_module(
     fused_weight = fused_weight.to(dtype=dtype, device=device)
     fused_lora = calculate_lora_weight(lora_weights, rank, lora_scale, device=device)
     module_weight = fused_weight - fused_lora
+    fused_lora.to('cpu')
     return module_weight.to(dtype=w_dtype, device=device)
 
 
@@ -642,8 +643,7 @@ def apply_lora_to_model(
             lora_weights, has_guidance
         )
     elif isinstance(lora_weights, LoraWeights):
-        b_ = lora_weights
-        lora_weights = b_.weights
+        lora_weights = lora_weights.weights
         keys_without_ab = list(
             set(
                 [
@@ -682,6 +682,7 @@ def apply_lora_to_model(
             module.set_weight_tensor(weight.type(dtype))
         else:
             module.weight.data = weight.type(dtype)
+
     logger.success("Lora applied")
     if return_lora_resolved:
         return model, lora_weights
