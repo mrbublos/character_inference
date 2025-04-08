@@ -6,13 +6,6 @@ RUN apt-get update
 WORKDIR /app
 ARG CACHEBUST=1
 
-RUN git clone https://github.com/Otnielush/character_inference.git
-WORKDIR /app/character_inference
-# COPY . .
-RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
-RUN apt-get install -y tmux nvtop htop
-
 
 ENV TORCH_CUDA_ARCH_LIST="Turing"
 ENV PATH="/opt/conda/bin:/usr/local/bin:${PATH}"
@@ -20,6 +13,15 @@ ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64/stubs/:/usr/lib/x86_64-linux-gnu:/usr
 ENV NVIDIA_VISIBLE_DEVICES="all"
 ENV NVIDIA_DRIVER_CAPABILITIES="video,compute,utility"
 ENV CUDA_HOME='/usr/local/cuda'
+
+
+RUN git clone https://github.com/Otnielush/character_inference.git
+WORKDIR /app/character_inference
+# COPY . .
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
+RUN apt-get install -y tmux nvtop htop
+
 
 # WORKDIR /repos
 # RUN git clone https://github.com/aredden/torch-cublas-hgemm.git

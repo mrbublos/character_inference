@@ -7,7 +7,7 @@ pydantic_core
 pydantic
 starlette
 fastapi
-bitsandbytes-cuda124
+bitsandbytes
 loguru
 regex
 safetensors
