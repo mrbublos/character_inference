@@ -6,9 +6,9 @@ RUN apt-get update
 WORKDIR /app
 ARG CACHEBUST=1
 
-# RUN git clone https://github.com/Otnielush/character_inference.git
+RUN git clone https://github.com/Otnielush/character_inference.git
 WORKDIR /app/character_inference
-COPY . .
+# COPY . .
 RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
 RUN apt-get install -y tmux nvtop htop
@@ -29,7 +29,7 @@ ENV CUDA_HOME='/usr/local/cuda'
 
 ENV HF_HOME="/workspace/hf"
 ENV HF_HUB_CACHE="/workspace/hf"
-ENV NUM_GPUS=1
+
 
 # Important paths
 # dir for saving Lora styles
@@ -39,11 +39,10 @@ EXPOSE 8088
 
 WORKDIR /app/character_inference
 # RUN ["chmod", "+x", "/app/character_inference/start_inference.sh"]
-CMD ["python3 inference_hf.py --port 8088 --host 0.0.0.0 --no_offload_embd"]
+CMD ["python inference_hf.py --port 8088 --host 0.0.0.0 --no_offload_embd"]
 
 # run container important params:
     # --gpus=all  - give access to gpus
-    # -e NUM_GPUS=_number of GPUs, default 1
     # -p _port_:8088  - map port
     # -v /workspace/hf  - dir for models
 
