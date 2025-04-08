@@ -39,7 +39,7 @@ EXPOSE 8088
 
 WORKDIR /app/character_inference
 # RUN ["chmod", "+x", "/app/character_inference/start_inference.sh"]
-CMD ["python3 inference_hf.py --port 8088 --host 0.0.0.0 --config-path configs/config-dev-inference-4090.json"]
+CMD ["python3 inference_hf.py --port 8088 --host 0.0.0.0 --no_offload_embd"]
 
 # run container important params:
     # --gpus=all  - give access to gpus

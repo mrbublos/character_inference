@@ -1,7 +1,5 @@
 import argparse
-import time
 from typing import Any, List, Optional
-import random
 import os
 from pydantic import BaseModel, Field
 from platform import system
@@ -13,15 +11,15 @@ from fastapi.responses import StreamingResponse
 import uvicorn
 import numpy as np
 
-
-# from torch.multiprocessing import set_start_method, Queue, Process, Pipe, current_process
 from multiprocessing import set_start_method, Queue, Process, Pipe, current_process
+
 try:
      set_start_method('spawn')
 except RuntimeError:
     pass
 
-
+import torch
+import gc
 
 
 if system() == "Windows":
@@ -34,10 +32,9 @@ NUM_GPUS = int(os.environ.get("NUM_GPUS", 1))  # Number of simulated GPUs
 TASK_QUEUE = Queue()
 GPU_PROCESSES: List[Process] = []
 STYLES_FOLDER = "/lora_styles"
+OFFLOAD_EMBD = True
+OFFLOAD_VAE = True
 
-
-
-# torch.multiprocessing.set_start_method('spawn')
 
 
 class LoraStyle(BaseModel):
@@ -62,20 +59,27 @@ app = FastAPI()
 
 
 
+def flush():
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_max_memory_allocated()
+    torch.cuda.reset_peak_memory_stats()
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Launch Flux API server")
     # parser.add_argument("-c", "--config-path", type=str, help="Path to the configuration file, if not provided, the model will be loaded from the command line arguments")
     parser.add_argument("-p", "--port", type=int, default=8088, help="Port to run the server on")
     parser.add_argument("-H", "--host", type=str, default="0.0.0.0", help="Host to run the server on")
+    parser.add_argument("--no_offload_embd", action="store_true", help="Keep embedding model always on GPU")
+    parser.add_argument("--no_offload_vae", action="store_true", help="Keep VAE model always on GPU")
 
     return parser.parse_args()
 
 
-
-
-def process_data_on_gpu(model, vars: dict[str, Any], pipe_in: Pipe):
+def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_in: Pipe):
     # loading loras
+    print(f"GPU {device} loading loras")
     lora_names = []
     lora_scales = []
     if not vars['lora_personal'] is None:
@@ -84,6 +88,8 @@ def process_data_on_gpu(model, vars: dict[str, Any], pipe_in: Pipe):
         lora_scales.append(1.0)
     if not vars['lora_styles'] is None:
         for style in vars['lora_styles']:
+            if len(style['path']) == 0:
+                continue
             model.load_lora_weights(style['path'], adapter_name=style['name'])
             lora_names.append(style['name'])
             lora_scales.append(style['scale'])
@@ -94,8 +100,48 @@ def process_data_on_gpu(model, vars: dict[str, Any], pipe_in: Pipe):
     vars['guidance_scale'] = vars['guidance']
     del(vars['guidance'], vars['num_steps'], vars['lora_personal'], vars['lora_styles'], vars['seed'])
 
-    print(f"GPU processing: {vars['prompt'][:40]}")
-    image = model(**vars).images[0]
+
+    # encoder
+    print(f"GPU {device} encoder: {vars['prompt'][:40]}")
+
+    if OFFLOAD_EMBD:
+        encoder.to("cuda")
+    with torch.no_grad():
+        prompt_embeds, pooled_prompt_embeds, text_ids = encoder.encode_prompt(
+            vars['prompt'], prompt_2=None, max_sequence_length=512, num_images_per_prompt=1)
+    if OFFLOAD_EMBD:
+        encoder.to('cpu')
+        flush()
+
+    # transformer
+    print(f"GPU {device} transformer: {vars['prompt'][:40]}")
+    with torch.inference_mode():
+        latents = model(prompt_embeds=prompt_embeds, pooled_prompt_embeds=pooled_prompt_embeds,
+                        num_inference_steps=vars['num_inference_steps'],
+                        guidance_scale=vars['guidance_scale'],
+                        height=vars['height'],
+                        width=vars['width'],
+                        output_type="latent").images
+
+    # vae
+    from diffusers.image_processor import VaeImageProcessor
+    from diffusers import FluxPipeline
+    print(f"GPU {device} vae: {vars['prompt'][:40]}")
+
+    vae_scale_factor = 2 ** (len(vae.config.block_out_channels) - 1)
+    image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+
+    if OFFLOAD_VAE:
+        vae.to("cuda")
+    with torch.no_grad():
+        latents = FluxPipeline._unpack_latents(latents, vars['height'], vars['width'], vae_scale_factor)
+        latents = (latents / vae.config.scaling_factor) + vae.config.shift_factor
+        image = vae.decode(latents, return_dict=False)[0]
+        image = image_processor.postprocess(image, output_type="pil")[0]
+    if OFFLOAD_VAE:
+        vae.to('cpu')
+
+    # bytes sending
     imgByteArr = io.BytesIO()
     image.save(imgByteArr, format='jpeg')
     imgByteArr = imgByteArr.getvalue()
@@ -104,51 +150,64 @@ def process_data_on_gpu(model, vars: dict[str, Any], pipe_in: Pipe):
 
     if len(lora_names) > 0:
         model.unload_lora_weights(reset_to_overwritten_params=True)
+    flush()
     # for name in loaded_loras:
     #     model.unload_lora_weights(name)
 
 
 
 
-def gpu_worker(gpu_id: int, task_queue):
-    max_memory = {gpu_id: "24GB"}
-    # max_memory = None
+def gpu_worker(gpu_id: int, task_queue, args):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    os.environ["HF_HOME"] = "/workspace/hf"
+    os.environ["HF_HUB_CACHE"] = "/workspace/hf"
+    change_globals(args)
+
+    print(f"GPU {gpu_id} globals: {OFFLOAD_EMBD = }  {OFFLOAD_VAE = }")
+
     import torch
     # torch.cuda.set_device(gpu_id)
-
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
-    from diffusers import FluxTransformer2DModel, FluxPipeline
+    from diffusers import FluxTransformer2DModel, FluxPipeline, AutoencoderKL
     from transformers import T5EncoderModel
 
+    max_memory = {k: "0GB" for k in range(NUM_GPUS)}
+    max_memory[gpu_id] = "24GB"
+    max_memory["cpu"] = "0GB"
 
     print(f"GPU {gpu_id} loading model. {max_memory = }")
+
     # start model on GPU
-    text_encoder_2 = T5EncoderModel.from_pretrained(
-        "black-forest-labs/FLUX.1-dev",
-        subfolder="text_encoder_2",
-        max_memory=max_memory,
-        quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
-        torch_dtype=torch.float16)  #.to(device)
+    text_encoder_2 = T5EncoderModel.from_pretrained("black-forest-labs/FLUX.1-dev",
+                                                    subfolder="text_encoder_2",
+                                                    quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
+                                                    torch_dtype=torch.bfloat16,  max_memory=max_memory)
 
-    transformer = FluxTransformer2DModel.from_pretrained(
-        "black-forest-labs/FLUX.1-dev",
-        subfolder="transformer",
-        max_memory=max_memory,
-        quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
-        torch_dtype=torch.float16) #.to(device)
+    encoder = FluxPipeline.from_pretrained("black-forest-labs/flux.1-dev", transformer=None, vae=None,
+                                           text_encoder_2=text_encoder_2,
+                                           quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
+                                           torch_dtype=torch.bfloat16, max_memory=max_memory)
+    if OFFLOAD_EMBD:
+        encoder.to('cpu')
+    else:
+        encoder.to('cuda')
 
-    pipeline = FluxPipeline.from_pretrained(
-        "black-forest-labs/FLUX.1-dev",
-        transformer=transformer,
-        max_memory=max_memory,
-        text_encoder_2=text_encoder_2,
-        torch_dtype=torch.float16) #, device_map="cuda:"+str(gpu_id))
-    pipeline.enable_model_cpu_offload(gpu_id)
-    print(f"gpu {gpu_id}; exe device = {pipeline._execution_device}")
-    # pipeline._execution_device = gpu_id
+    transformer = FluxTransformer2DModel.from_pretrained("black-forest-labs/flux.1-dev", subfolder="transformer",
+                                                   max_memory=max_memory,
+                                                   quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
+                                                   torch_dtype=torch.bfloat16,)
 
+    model = FluxPipeline.from_pretrained("black-forest-labs/flux.1-dev", transformer=transformer, text_encoder=None,
+                                         text_encoder_2=None, tokenizer=None, tokenizer_2=None, vae=None,
+                                         torch_dtype=torch.bfloat16)
+
+    vae = AutoencoderKL.from_pretrained("black-forest-labs/flux.1-dev", subfolder="vae",
+                                        torch_dtype=torch.bfloat16, max_memory=max_memory)
+    if OFFLOAD_VAE:
+        vae.to('cpu')
+    else:
+        vae.to('cuda')
 
     # generation loop
     print(f"GPU {gpu_id} worker processes started.")
@@ -159,7 +218,7 @@ def gpu_worker(gpu_id: int, task_queue):
         vars, pipe_in = task
         # child_conn = pickle.loads(child_conn)
         print(f"GPU worker {current_process().name} received task: {vars['prompt'][:40]}")
-        process_data_on_gpu(pipeline, vars, pipe_in)
+        process_data_on_gpu(encoder, model, vae, gpu_id, vars, pipe_in)
 
 
 def output_generator(pipe_out: Pipe):
@@ -203,6 +262,9 @@ async def generate(args: GenerateArgs):
     if not args.lora_styles is None:
         for i in range(len(args.lora_styles)):
             path = args.lora_styles[i].path
+            if not os.path.exists(path):
+                args.lora_styles[i].path = ""
+                continue
             basename = os.path.basename(path)
             local_path = os.path.join(STYLES_FOLDER, basename)
             if not os.path.exists(local_path):  # download and load from local
@@ -221,6 +283,15 @@ async def generate(args: GenerateArgs):
     return StreamingResponse(output_generator(pipe_out), media_type="image/jpeg")
 
 
+def change_globals(args):
+    global OFFLOAD_EMBD, OFFLOAD_VAE
+    if args.no_offload_embd:
+        OFFLOAD_EMBD = False
+        # print("OFFLOAD_EMBD changed to False")
+    if args.no_offload_vae:
+        OFFLOAD_VAE = False
+        # print("OFFLOAD_VAE changed to False")
+
 
 def shutdown_gpus():
     """
@@ -232,17 +303,20 @@ def shutdown_gpus():
         process.join()
     print("GPU worker processes stopped.")
 
-
-
 # app.add_event_handler("startup", startup_event)
 app.add_event_handler("shutdown", shutdown_gpus)
 
+
 if __name__ == "__main__":
+
     args = parse_args()
+    change_globals(args)
+
+
     os.makedirs(STYLES_FOLDER, exist_ok=True)
 
     for i in range(NUM_GPUS):
-        process = Process(target=gpu_worker, args=(i, TASK_QUEUE,), name=f"GPU-{i}")
+        process = Process(target=gpu_worker, args=(i, TASK_QUEUE, args), name=f"GPU-{i}")
         GPU_PROCESSES.append(process)
         process.start()
     print("GPU worker processes launched.")
