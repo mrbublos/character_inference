@@ -21,3 +21,8 @@ pydash
 pybase64
 uvicorn
 optimum-quanto==0.2.5
+
+diffusers
+protobuf
+peft
+triton

@@ -43,7 +43,7 @@ class LoraLoadResponse(BaseModel):
 class LoraStyle(BaseModel):
     path: str
     scale: float = Field(default=1.0)
-    name: Optional[str]
+    name: Optional[str] = None
 
 
 class GenerateArgs(BaseModel):
@@ -91,7 +91,7 @@ def generate(args: GenerateArgs):
         loaded_loras.append("user")
     if not args.lora_styles is None:
         for style in args.lora_styles:
-            path = style['path']
+            path = style.path
             basename = os.path.basename(path)
             local_path = os.path.join(STYLES_FOLDER, basename)
             if not os.path.exists(local_path):  # download and load from local

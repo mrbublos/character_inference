@@ -692,7 +692,7 @@ class FluxPipeline:
                     f"Loading as prequantized flow transformer? {config.prequantized_flow}"
                 )
 
-            models = load_models_from_config(config)
+            models = load_models_from_config(config, )
             config = models.config
             flux_device = into_device(config.flux_device)
             ae_device = into_device(config.ae_device)
