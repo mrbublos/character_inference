@@ -1,5 +1,4 @@
 import argparse
-import time
 from typing import Any, List, Optional
 import os
 from pydantic import BaseModel, Field
@@ -12,8 +11,7 @@ from fastapi.responses import StreamingResponse
 import uvicorn
 import numpy as np
 
-from multiprocessing import set_start_method, Queue, Process, Pipe, current_process, Value, Array
-from threading import Thread
+from multiprocessing import set_start_method, Queue, Process, Pipe, current_process
 
 try:
      set_start_method('spawn')
@@ -30,6 +28,7 @@ else:
     MAX_RAND = 2**32 - 1
 
 # Configuration
+# This two changes from __main__ function
 NUM_GPUS = 1  # Number of simulated GPUs
 MAX_GPU_MEMORY = 1
 
@@ -50,6 +49,7 @@ class LoraStyle(BaseModel):
 
 
 class GenerateArgs(BaseModel):
+    """Web request data format"""
     prompt: str
     width: Optional[int] = Field(default=1024)
     height: Optional[int] = Field(default=720)
@@ -85,6 +85,7 @@ def parse_args():
 
 
 def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_in: Pipe):
+    """Image generating steps with lora loads and memory management"""
     # loading loras
     print(f"GPU {device} loading loras")
     lora_names = []
@@ -159,20 +160,17 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
     if len(lora_names) > 0:
         model.unload_lora_weights(reset_to_overwritten_params=True)
     flush()
-    # for name in loaded_loras:
-    #     model.unload_lora_weights(name)
-
 
 
 
 def gpu_worker(gpu_id: int, world_size, task_queue, args):
+    """Loads models and listening new tasks from Queue"""
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     os.environ["HF_HOME"] = "/workspace/hf"
     os.environ["HF_HUB_CACHE"] = "/workspace/hf"
 
     import torch
-    # torch.cuda.set_device(gpu_id)
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
     from diffusers import FluxTransformer2DModel, FluxPipeline, AutoencoderKL
     from transformers import T5EncoderModel
@@ -230,6 +228,7 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
 
 
 def keep_worker_alive(gpu_id: int, world_size, task_queue, args):
+    """Keeps each worker alive"""
     while True:
         try:
             result = gpu_worker(gpu_id, world_size, task_queue, args)
@@ -262,20 +261,22 @@ def output_generator(pipe_out: Pipe):
 @app.post("/generate")
 async def generate(args: GenerateArgs):
     """
-    Generates an image from the Flux flow transformer.
-
     Args:
-        args (GenerateArgs): Arguments for image generation:
-            - `prompt`: The prompt used for image generation.
-            - `width`: The width of the image.
-            - `height`: The height of the image.
-            - `num_steps`: The number of steps for the image generation.
-            - `guidance`: The guidance for image generation, represents the
-                influence of the prompt on the image generation.
-            - `seed`: The seed for the image generation.
+        args (GenerateArgs):
 
     Returns:
         StreamingResponse: The generated image as streaming jpeg bytes.
+    Example:
+        data = {"prompt": "Headshot of a handsome young U5ER: Dark green sweater with buttons and shawl collar, black hair, short beard. Serious expression on a black background, soft studio lighting.",
+                "width": 1024, "height": 1024, "num_steps": 50,
+                "lora_styles": [
+                    {"path": "/workspace/lora_styles/amateurphoto-v6-forcu.safetensors", "scale": 0.7, "name": "amateur"},
+                    {"path": "/workspace/lora_styles/Disney-Studios-Flux-000008.safetensors", "scale": 0.2, "name": "Disney"},
+                ],
+                "lora_personal": {"path": "/workspace/lora_styles/h100-bs2-26.safetensors", "scale": 1},
+                }
+
+        res = requests.post("http://localhost:8088/generate", json=data, stream=True)
     """
 
     # downloading if need lora styles
@@ -356,6 +357,3 @@ if __name__ == "__main__":
 
 
     uvicorn.run(app, host=args.host, port=args.port)
-
-# NUM_GPUS = torch.cuda.device_count()
-# MAX_GPU_MEMORY = int(torch.cuda.mem_get_info(0)[1] / 1024 ** 2 / 1000)

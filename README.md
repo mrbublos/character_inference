@@ -1,3 +1,42 @@
+# Endpoint inference
+Текущий скрипт эндпоинта: https://github.com/Otnielush/character_inference/blob/main/inference_hf.py  
+Так же как обучение скрипт ждет что модель будет в /workspace/hf.  
+Можно сделать чтобы моделька загружалась или с нашей внешки или с huggingface (нужен акк).  
+стили (лора адаптеры) - скрипт ждет чтобы они были доступны локально (хранилище). Передаем путь, силу применения (0-1...)  
+
+Я сделал два варианта:  
+* Персональный (лицо юзера) - "lora_personal" - {"path": "", "scale": 1}
+* Стили - "lora_styles" - массив словарей - [{"path": "", "scale": 1, "name": опционально}, ...]  
+
+Возвращает картинку в байтах. На питоне можно поймать так: 
+```
+Image.open(BytesIO(response.content))
+```  
+
+
+На ендпоинте есть очередь. По колву ГПУ запускаются работники которые из очереди обрабатывают запрос и возвращают по соединению. Скрипт готов к стриму, можно доделать по желанию.  
+
+Работники самовостанавливаются если заглючили.  
+Обработку ошибок добавьте какие понадобятся.  
+
+Вот пример запроса:
+```python
+import requests
+data = {"prompt": "Headshot of a handsome young U5ER: Dark green sweater with buttons and shawl collar, black hair, short beard. Serious expression on a black background, soft studio lighting.",
+        "width": 1024, "height": 1024, "num_steps": 50,
+        "lora_styles": [
+            {"path": "/workspace/lora_styles/amateurphoto-v6-forcu.safetensors", "scale": 0.7, "name": "amateur"},
+            {"path": "/workspace/lora_styles/Disney-Studios-Flux-000008.safetensors", "scale": 0.2, "name": "Disney"},
+        ],
+        "lora_personal": {"path": "/workspace/lora_styles/h100-bs2-26.safetensors", "scale": 1},
+        }
+
+res = requests.post("http://localhost:8088/generate", json=data, stream=True)
+```
+
+
+
+
 # Flux FP8 (true) Matmul Implementation with FastAPI
 
 This repository contains an implementation of the Flux model, along with an API that allows you to generate images based on text prompts. And also a simple single line of code to use the generator as a single object, similar to diffusers pipelines.
