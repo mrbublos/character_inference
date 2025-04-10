@@ -7,7 +7,7 @@ pydantic_core
 pydantic
 starlette
 fastapi
-bitsandbytes
+bitsandbytes==0.45.5
 loguru
 regex
 safetensors
@@ -22,7 +22,7 @@ pybase64
 uvicorn
 optimum-quanto==0.2.5
 
-diffusers
+diffusers==0.32.2
 protobuf
-peft
+peft==0.15.1
 triton
