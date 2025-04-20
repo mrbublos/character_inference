@@ -28,7 +28,7 @@ else:
     MAX_RAND = 2**32 - 1
 
 # Configuration
-# This two changes from __main__ function
+# This two vars will be changed in __main__ function
 NUM_GPUS = 1  # Number of simulated GPUs
 MAX_GPU_MEMORY = 1
 
@@ -173,6 +173,9 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
 
     import torch
     torch.set_grad_enabled(False)
+    import torch.nn.functional as F
+    from sageattention import sageattn
+    F.scaled_dot_product_attention = sageattn
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
     from diffusers import FluxTransformer2DModel, FluxPipeline, AutoencoderKL
     from transformers import T5EncoderModel

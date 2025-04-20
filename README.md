@@ -34,7 +34,7 @@ data = {"prompt": "Headshot of a handsome young U5ER: Dark green sweater with bu
 res = requests.post("http://localhost:8088/generate", json=data, stream=True)
 ```
 
-### inference_hf.py - 1024x1024, 50 iterations, no lora
+### inference_hf.py - 1024x1024, 50 iterations
 
 |               |  6000 ada |      4090 |   L40S |                   5090 |
 |:--------------|----------:|----------:|-------:|-----------------------:|
@@ -46,6 +46,7 @@ res = requests.post("http://localhost:8088/generate", json=data, stream=True)
 
 
 
+---
 # Flux FP8 (true) Matmul Implementation with FastAPI
 
 This repository contains an implementation of the Flux model, along with an API that allows you to generate images based on text prompts. And also a simple single line of code to use the generator as a single object, similar to diffusers pipelines.
