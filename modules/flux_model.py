@@ -622,6 +622,7 @@ class Flux(nn.Module):
             if lora.path == identifier or lora.name == identifier:
                 return True
 
+
     def load_lora(self, path: str, scale: float, name: str = None, silent=False):
         from lora_loading import (
             LoraWeights,

@@ -13,6 +13,7 @@ except Exception as e:
 from float8_quantize import F8Linear
 from modules.flux_model import Flux
 
+
 path_regex = re.compile(r"/|\\")
 
 StateDict: TypeAlias = OrderedDict[str, torch.Tensor]
@@ -679,9 +680,10 @@ def apply_lora_to_model(
             continue
         weight = apply_lora_weight_to_module(weight, lora_sd, lora_scale=lora_scale)
         if is_f8:
-            module.set_weight_tensor(weight.type(dtype))
+            module.set_weight_tensor(weight.detach().type(dtype))
         else:
-            module.weight.data = weight.type(dtype)
+            with torch.no_grad():
+                module.weight.copy_(weight.detach().type(dtype))
 
     logger.success("Lora applied")
     if return_lora_resolved:
@@ -696,7 +698,8 @@ def remove_lora_from_module(
     silent=False
 ):
     has_guidance = model.params.guidance_embed
-    logger.info(f"Loading LoRA weights for {lora_path}")
+    if isinstance(lora_path, str):
+        logger.info(f"Loading LoRA weights for {lora_path}")
     lora_weights, already_loaded = get_lora_weights(lora_path)
 
     if not already_loaded:

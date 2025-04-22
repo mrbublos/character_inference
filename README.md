@@ -36,13 +36,13 @@ res = requests.post("http://localhost:8088/generate", json=data, stream=True)
 
 ### inference_hf.py - 1024x1024, 50 iterations
 
-|               |  6000 ada |      4090 |   L40S |                   5090 |
-|:--------------|----------:|----------:|-------:|-----------------------:|
-| runpod price  |     0.77$ |      0.7$ |  0.86$ |                   0.9$ |
-| fp16          |    35 sec | no memory | 29 sec |   need rewrite kernels |
-| fp16 Lora     |    41 sec |           | 40 sec |                        |
-| quant         |           |    39 sec | 36 sec |                        |
-| quant Lora    |           |   110 sec | 60 sec |                        |
+|               | 6000 ada |      4090 |   L40S |                   5090 |
+|:--------------|---------:|----------:|-------:|-----------------------:|
+| runpod price  |    0.77$ |      0.7$ |  0.86$ |                   0.9$ |
+| fp16          |   35 sec | no memory | 20 sec |   need rewrite kernels |
+| fp16 Lora     |   49 sec |           | 42 sec |                        |
+| quant         |          |    39 sec | 36 sec |                        |
+| quant Lora    |          |   110 sec | 60 sec |                        |
 
 
 

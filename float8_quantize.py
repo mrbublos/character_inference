@@ -75,18 +75,10 @@ class F8Linear(nn.Module):
         )
         self.trial_index = 0
         self.register_buffer("scale", None)
-        self.register_buffer(
-            "input_scale",
-            None,
-        )
-        self.register_buffer(
-            "float8_data",
-            None,
-        )
+        self.register_buffer("input_scale", None,)
+        self.register_buffer("float8_data", None,)
         self.scale_reciprocal = self.register_buffer("scale_reciprocal", None)
-        self.input_scale_reciprocal = self.register_buffer(
-            "input_scale_reciprocal", None
-        )
+        self.input_scale_reciprocal = self.register_buffer("input_scale_reciprocal", None)
 
     def _load_from_state_dict(
         self,
@@ -175,19 +167,23 @@ class F8Linear(nn.Module):
     def quantize_weight(self):
         if self.weight_initialized:
             return
-        amax = torch.max(torch.abs(self.weight.data)).float()
-        self.scale = self.amax_to_scale(amax, self.max_value)
-        self.float8_data = self.to_fp8_saturated(
-            self.weight.data, self.scale, self.max_value
-        ).to(self.float8_dtype)
-        self.scale_reciprocal = self.scale.reciprocal()
-        self.weight.data = torch.zeros(
-            1, dtype=self.weight.dtype, device=self.weight.device, requires_grad=False
-        )
-        self.weight_initialized = True
+        with torch.inference_mode():
+            amax = torch.max(torch.abs(self.weight.data)).float()
+            if self.scale is None:
+                self.scale = self.amax_to_scale(amax, self.max_value)
+            else:
+                self.scale.copy_(self.amax_to_scale(amax, self.max_value).clone())
+            self.float8_data.copy_(self.to_fp8_saturated(self.weight.data, self.scale, self.max_value).detach().to(self.float8_dtype))
+            self.scale_reciprocal.copy_(self.scale.detach().reciprocal())
+            self.weight.data = torch.zeros(1, dtype=self.weight.dtype, device=self.weight.device, requires_grad=False)
+            self.weight_initialized = True
 
     def set_weight_tensor(self, tensor: torch.Tensor):
-        self.weight.data = tensor
+        if self.weight.size(0) == 1:
+            self.weight.data = tensor
+        else:
+            with torch.inference_mode():
+                self.weight.copy_(tensor)
         self.weight_initialized = False
         self.quantize_weight()
 
@@ -199,27 +195,29 @@ class F8Linear(nn.Module):
 
     def quantize_input(self, x: torch.Tensor):
         if self.input_scale_initialized:
-            return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
-                self.input_float8_dtype
-            )
+            return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(self.input_float8_dtype)
         elif self.trial_index < self.num_scale_trials:
 
             amax = torch.max(torch.abs(x)).float()
 
             self.input_amax_trials[self.trial_index] = amax
             self.trial_index += 1
-            self.input_scale = self.amax_to_scale(
-                self.input_amax_trials[: self.trial_index].max(), self.input_max_value
-            )
-            self.input_scale_reciprocal = self.input_scale.reciprocal()
+            if self.input_scale is None:
+                self.input_scale = self.amax_to_scale(self.input_amax_trials[: self.trial_index].max(), self.input_max_value)
+                self.input_scale_reciprocal = self.input_scale.reciprocal()
+            else:
+                self.input_scale.copy_(self.amax_to_scale(self.input_amax_trials[: self.trial_index].max(), self.input_max_value))
+                self.input_scale_reciprocal.copy_(self.input_scale.reciprocal())
             return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
                 self.input_float8_dtype
             )
         else:
-            self.input_scale = self.amax_to_scale(
-                self.input_amax_trials.max(), self.input_max_value
-            )
-            self.input_scale_reciprocal = self.input_scale.reciprocal()
+            if self.input_scale is None:
+                self.input_scale = self.amax_to_scale(self.input_amax_trials.max(), self.input_max_value)
+                self.input_scale_reciprocal = self.input_scale.reciprocal()
+            else:
+                self.input_scale.copy_(self.amax_to_scale(self.input_amax_trials.max(), self.input_max_value))
+                self.input_scale_reciprocal.copy_(self.input_scale.reciprocal())
             self.input_scale_initialized = True
             return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
                 self.input_float8_dtype

@@ -257,6 +257,7 @@ def load_flow_model(config: ModelSpec) -> Flux:
         print_load_warning(missing, unexpected)
         if not config.prequantized_flow:
             model.type(into_dtype(config.flow_dtype))
+        model.eval()
     return model
 
 
@@ -335,3 +336,23 @@ def load_models_from_config(config: ModelSpec) -> LoadedModels:
         t5=t5,
         config=config,
     )
+
+
+def mem_tracker(func: callable):
+    def wrapper(*args, **kwargs):
+        func_name = func.__name__
+        torch.cuda.synchronize()
+        mem_alloc = torch.cuda.memory_allocated()
+        mem_reser = torch.cuda.memory_reserved()
+        # print(f"\tFunction: {func_name}")
+        print(f"Func: {func_name}\t[BEFORE] GPU Memory Allocated: {mem_alloc / 1024 ** 2:.2f} MB \t| Reserved: {mem_reser / 1024 ** 2:.2f} MB")
+
+        result = func(*args, **kwargs)
+
+        torch.cuda.synchronize()
+        mem_alloc = torch.cuda.memory_allocated()
+        mem_reser = torch.cuda.memory_reserved()
+        print(f"Func: {func_name}\t[AFTER]  GPU Memory Allocated: {mem_alloc / 1024 ** 2:.2f} MB \t| Reserved: {mem_reser / 1024 ** 2:.2f} MB")
+
+        return result
+    return wrapper

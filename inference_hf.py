@@ -91,7 +91,7 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
 
     if OFFLOAD_EMBD:
         encoder.to("cuda")
-    with torch.no_grad():
+    with torch.inference_mode():
         prompt_embeds, pooled_prompt_embeds, text_ids = encoder.encode_prompt(
             vars['prompt'], prompt_2=None, max_sequence_length=512, num_images_per_prompt=1)
     if OFFLOAD_EMBD:
@@ -102,24 +102,30 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
     print(f"GPU {device} loading loras")
     lora_names = []
     lora_scales = []
-    if not vars['lora_personal'] is None:
+    if not vars.get('lora_personal', None) is None:
         model.load_lora_weights(vars['lora_personal']['path'], adapter_name='user')
         lora_names.append("user")
         lora_scales.append(1.0)
-    if not vars['lora_styles'] is None:
+        del(vars['lora_personal'])
+    if not vars.get('lora_styles', None) is None:
         for style in vars['lora_styles']:
             if len(style['path']) == 0:
                 continue
             model.load_lora_weights(style['path'], adapter_name=style['name'])
             lora_names.append(style['name'])
             lora_scales.append(style['scale'])
+        del(vars['lora_styles'])
 
     if len(lora_names) > 0:
-        model.set_adapters(lora_names, adapter_weights=lora_scales)
+        model.add_weighted_adapter(lora_names, lora_scales, "merge")
+        model.set_adapter("merge")
+        model.fuse_lora(adapter_names="merge", lora_scale=1.0)
+        model.unload_lora_weights()
+        # model.set_adapters(lora_names, adapter_weights=lora_scales)
 
     vars['num_inference_steps'] = vars['num_steps']
     vars['guidance_scale'] = vars['guidance']
-    del (vars['guidance'], vars['num_steps'], vars['lora_personal'], vars['lora_styles'], vars['seed'])
+    del(vars['guidance'], vars['num_steps'], vars['seed'])
 
     # transformer
     print(f"GPU {device} transformer: {vars['prompt'][:40]}")
@@ -132,7 +138,8 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
                         output_type="latent").images
 
     if len(lora_names) > 0:
-        model.unload_lora_weights(reset_to_overwritten_params=True)
+        model.unfuse_lora()
+        # model.unload_lora_weights(reset_to_overwritten_params=True)
     flush()
 
     # vae
@@ -145,13 +152,16 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
 
     if OFFLOAD_VAE:
         vae.to("cuda")
-    with torch.no_grad():
+    with torch.inference_mode():
         latents = FluxPipeline._unpack_latents(latents, vars['height'], vars['width'], vae_scale_factor)
         latents = (latents / vae.config.scaling_factor) + vae.config.shift_factor
         image = vae.decode(latents, return_dict=False)[0]
         image = image_processor.postprocess(image, output_type="pil")[0]
     if OFFLOAD_VAE:
         vae.to('cpu')
+
+    if pipe_in is None: # warmup
+        return
 
     # bytes sending
     imgByteArr = io.BytesIO()
@@ -173,9 +183,13 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
 
     import torch
     torch.set_grad_enabled(False)
-    import torch.nn.functional as F
-    from sageattention import sageattn
-    F.scaled_dot_product_attention = sageattn
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark_limit = 20
+    torch.set_float32_matmul_precision("high")
+    from float8_quantize import swap_to_cublaslinear
+
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
     from diffusers import FluxTransformer2DModel, FluxPipeline, AutoencoderKL
     from transformers import T5EncoderModel
@@ -224,6 +238,24 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
         vae.to('cpu')
     else:
         vae.to('cuda')
+
+    # warmup and compile
+    print(f"GPU {gpu_id} warmup and compile.")
+    warmup_dict = dict(height=1024, width=1024, num_steps=4, guidance=3.5, seed=10,
+        prompt="A beautiful Warmup image generation used nn.Linear input scales prior to compilation 😉",)
+    process_data_on_gpu(encoder, model, vae, gpu_id, warmup_dict, None)
+    with torch.inference_mode():
+        for block in model.transformer.transformer_blocks:
+            block.compile()
+        for block in model.transformer.single_transformer_blocks:
+            block.compile()
+        for extra in ["context_embedder", "x_embedder", "time_text_embed", "proj_out", "pos_embed",]:
+            getattr(model.transformer, extra).compile()
+        encoder.text_encoder_2.compile()
+        encoder.text_encoder.compile()
+        vae.fuse_qkv_projections()
+        vae = torch.compile(vae)
+
 
     # generation loop
     print(f"GPU {gpu_id} worker processes started.")
