@@ -628,7 +628,7 @@ class Flux(nn.Module):
             if lora.path == identifier or lora.name == identifier:
                 return True
 
-    def load_lora(self, path: str, scale: float, name: str = None):
+    def load_lora(self, path: str, scale: float, name: str = None, silent=False):
         from lora_loading import (
             LoraWeights,
             apply_lora_to_model,
@@ -642,23 +642,23 @@ class Flux(nn.Module):
                     f"Lora {lora.name} already loaded with same scale - ignoring!"
                 )
             else:
-                remove_lora_from_module(self, lora, lora.scale)
-                apply_lora_to_model(self, lora, scale)
+                remove_lora_from_module(self, lora, lora.scale, silent=silent)
+                apply_lora_to_model(self, lora, scale, silent=silent)
                 for idx, lora_ in enumerate(self.loras):
                     if lora_.path == lora.path:
                         self.loras[idx].scale = scale
                         break
         else:
-            _, lora = apply_lora_to_model(self, path, scale, return_lora_resolved=True)
+            _, lora = apply_lora_to_model(self, path, scale, return_lora_resolved=True, silent=silent)
             self.loras.append(LoraWeights(lora, path, name, scale))
 
-    def unload_lora(self, path_or_identifier: str):
+    def unload_lora(self, path_or_identifier: str, silent=False):
         from lora_loading import remove_lora_from_module
 
         removed = False
         for idx, lora_ in enumerate(list(self.loras)):
             if lora_.path == path_or_identifier or lora_.name == path_or_identifier:
-                remove_lora_from_module(self, lora_.weights, lora_.scale)
+                remove_lora_from_module(self, lora_.weights, lora_.scale, silent=silent)
                 self.loras.pop(idx)
                 removed = True
                 break
