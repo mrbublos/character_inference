@@ -26,7 +26,6 @@ from torch._inductor import config as ind_config
 
 config.cache_size_limit = 10000000000
 ind_config.shape_padding = True
-config.suppress_errors = True
 import platform
 
 from loguru import logger
@@ -71,7 +70,7 @@ class FluxPipeline:
         t5: "HFEmbedder" = None,
         model: "Flux" = None,
         ae: "AutoEncoder" = None,
-        dtype: torch.dtype = torch.bfloat16,
+        dtype: torch.dtype = torch.float16,
         verbose: bool = False,
         flux_device: torch.device | str = "cuda:0",
         ae_device: torch.device | str = "cuda:1",
@@ -154,7 +153,6 @@ class FluxPipeline:
         lora_path: Union[str, OrderedDict[str, torch.Tensor]],
         scale: float,
         name: Optional[str] = None,
-        silent=False
     ):
         """
         Loads a LoRA checkpoint into the Flux flow transformer.
@@ -167,16 +165,16 @@ class FluxPipeline:
             scale (float): Scaling factor for the LoRA weights.
             name (str): Name of the LoRA checkpoint, optionally can be left as None, since it only acts as an identifier.
         """
-        self.model.load_lora(path=lora_path, scale=scale, name=name, silent=silent)
+        self.model.load_lora(path=lora_path, scale=scale, name=name)
 
-    def unload_lora(self, path_or_identifier: str, silent=False):
+    def unload_lora(self, path_or_identifier: str):
         """
         Unloads the LoRA checkpoint from the Flux flow transformer.
 
         Args:
             path_or_identifier (str): Path to the LoRA checkpoint or the name given to the LoRA checkpoint when it was loaded.
         """
-        self.model.unload_lora(path_or_identifier=path_or_identifier, silent=silent)
+        self.model.unload_lora(path_or_identifier=path_or_identifier)
 
     @torch.inference_mode()
     def compile(self):
@@ -692,7 +690,7 @@ class FluxPipeline:
                     f"Loading as prequantized flow transformer? {config.prequantized_flow}"
                 )
 
-            models = load_models_from_config(config, )
+            models = load_models_from_config(config)
             config = models.config
             flux_device = into_device(config.flux_device)
             ae_device = into_device(config.ae_device)

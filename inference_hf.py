@@ -14,7 +14,7 @@ import numpy as np
 from multiprocessing import set_start_method, Queue, Process, Pipe, current_process
 
 try:
-     set_start_method('spawn')
+    set_start_method('spawn')
 except RuntimeError:
     pass
 
@@ -117,11 +117,7 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
         del(vars['lora_styles'])
 
     if len(lora_names) > 0:
-        model.add_weighted_adapter(lora_names, lora_scales, "merge")
-        model.set_adapter("merge")
-        model.fuse_lora(adapter_names="merge", lora_scale=1.0)
-        model.unload_lora_weights()
-        # model.set_adapters(lora_names, adapter_weights=lora_scales)
+        model.set_adapters(lora_names, adapter_weights=lora_scales)
 
     vars['num_inference_steps'] = vars['num_steps']
     vars['guidance_scale'] = vars['guidance']
@@ -138,8 +134,7 @@ def process_data_on_gpu(encoder, model, vae, device, vars: dict[str, Any], pipe_
                         output_type="latent").images
 
     if len(lora_names) > 0:
-        model.unfuse_lora()
-        # model.unload_lora_weights(reset_to_overwritten_params=True)
+        model.unload_lora_weights(reset_to_overwritten_params=True)
     flush()
 
     # vae
@@ -188,11 +183,10 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.benchmark_limit = 20
     torch.set_float32_matmul_precision("high")
-    from float8_quantize import swap_to_cublaslinear
+
 
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
     from diffusers import FluxTransformer2DModel, FluxPipeline, AutoencoderKL
-    from transformers import T5EncoderModel
 
     change_globals(args, max_mem=True)
     print(f"GPU {gpu_id} globals: {OFFLOAD_EMBD = }  {OFFLOAD_VAE = }")
@@ -205,16 +199,6 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
     dtype = torch.float16 if not args.no_quant else torch.bfloat16
 
     # start model on GPU
-    # text_encoder_2 = T5EncoderModel.from_pretrained("black-forest-labs/FLUX.1-dev",
-    #                                                 subfolder="text_encoder_2",
-    #                                                 # quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True) if not args.no_quant else None,
-    #                                                 torch_dtype=dtype,  max_memory=max_memory)
-    #
-    # encoder = FluxPipeline.from_pretrained("black-forest-labs/flux.1-dev", transformer=None, vae=None, text_encoder=None,
-    #                                        text_encoder_2=text_encoder_2,
-    #                                        # quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True) if not args.no_quant else None,
-    #                                        torch_dtype=dtype, max_memory=max_memory)
-
     encoder = FluxPipeline.from_pretrained("black-forest-labs/flux.1-dev", transformer=None, vae=None,
                                            torch_dtype=dtype, max_memory=max_memory)
 
@@ -240,21 +224,22 @@ def gpu_worker(gpu_id: int, world_size, task_queue, args):
         vae.to('cuda')
 
     # warmup and compile
-    print(f"GPU {gpu_id} warmup and compile.")
+    print(f"GPU {gpu_id} warmup.")
     warmup_dict = dict(height=1024, width=1024, num_steps=4, guidance=3.5, seed=10,
         prompt="A beautiful Warmup image generation used nn.Linear input scales prior to compilation 😉",)
     process_data_on_gpu(encoder, model, vae, gpu_id, warmup_dict, None)
-    with torch.inference_mode():
-        for block in model.transformer.transformer_blocks:
-            block.compile()
-        for block in model.transformer.single_transformer_blocks:
-            block.compile()
-        for extra in ["context_embedder", "x_embedder", "time_text_embed", "proj_out", "pos_embed",]:
-            getattr(model.transformer, extra).compile()
-        encoder.text_encoder_2.compile()
-        encoder.text_encoder.compile()
-        vae.fuse_qkv_projections()
-        vae = torch.compile(vae)
+    # with torch.inference_mode():
+        # for block in model.transformer.transformer_blocks:
+        #     block.compile()
+        # for block in model.transformer.single_transformer_blocks:
+        #     block.compile()
+
+        # for extra in ["context_embedder", "x_embedder", "time_text_embed", "proj_out", "pos_embed",]:
+        #     getattr(model.transformer, extra).compile()
+        # encoder.text_encoder_2.compile()
+        # encoder.text_encoder.compile()
+        # vae.fuse_qkv_projections()
+        # vae = torch.compile(vae)
 
 
     # generation loop

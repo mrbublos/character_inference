@@ -75,10 +75,18 @@ class F8Linear(nn.Module):
         )
         self.trial_index = 0
         self.register_buffer("scale", None)
-        self.register_buffer("input_scale", None,)
-        self.register_buffer("float8_data", None,)
+        self.register_buffer(
+            "input_scale",
+            None,
+        )
+        self.register_buffer(
+            "float8_data",
+            None,
+        )
         self.scale_reciprocal = self.register_buffer("scale_reciprocal", None)
-        self.input_scale_reciprocal = self.register_buffer("input_scale_reciprocal", None)
+        self.input_scale_reciprocal = self.register_buffer(
+            "input_scale_reciprocal", None
+        )
 
     def _load_from_state_dict(
         self,
@@ -92,19 +100,39 @@ class F8Linear(nn.Module):
     ):
         sd = {k.replace(prefix, ""): v for k, v in state_dict.items()}
         if "weight" in sd:
-            if ("float8_data" not in sd or sd["float8_data"] is None and sd["weight"].shape == (self.out_features, self.in_features)):
+            if (
+                "float8_data" not in sd
+                or sd["float8_data"] is None
+                and sd["weight"].shape == (self.out_features, self.in_features)
+            ):
                 # Initialize as if it's an F8Linear that needs to be quantized
-                self._parameters["weight"] = nn.Parameter(sd["weight"], requires_grad=False)
+                self._parameters["weight"] = nn.Parameter(
+                    sd["weight"], requires_grad=False
+                )
                 if "bias" in sd:
-                    self._parameters["bias"] = nn.Parameter(sd["bias"], requires_grad=False)
+                    self._parameters["bias"] = nn.Parameter(
+                        sd["bias"], requires_grad=False
+                    )
                 self.quantize_weight()
-            elif sd["float8_data"].shape == (self.out_features, self.in_features,) and sd["weight"] == torch.zeros_like(sd["weight"]):
+            elif sd["float8_data"].shape == (
+                self.out_features,
+                self.in_features,
+            ) and sd["weight"] == torch.zeros_like(sd["weight"]):
                 w = sd["weight"]
                 # Set the init values as if it's already quantized float8_data
                 self._buffers["float8_data"] = sd["float8_data"]
-                self._parameters["weight"] = nn.Parameter(torch.zeros(1, dtype=w.dtype, device=w.device, requires_grad=False, ))
+                self._parameters["weight"] = nn.Parameter(
+                    torch.zeros(
+                        1,
+                        dtype=w.dtype,
+                        device=w.device,
+                        requires_grad=False,
+                    )
+                )
                 if "bias" in sd:
-                    self._parameters["bias"] = nn.Parameter(sd["bias"], requires_grad=False)
+                    self._parameters["bias"] = nn.Parameter(
+                        sd["bias"], requires_grad=False
+                    )
                 self.weight_initialized = True
 
                 # Check if scales and reciprocals are initialized
@@ -167,23 +195,19 @@ class F8Linear(nn.Module):
     def quantize_weight(self):
         if self.weight_initialized:
             return
-        with torch.inference_mode():
-            amax = torch.max(torch.abs(self.weight.data)).float()
-            if self.scale is None:
-                self.scale = self.amax_to_scale(amax, self.max_value)
-            else:
-                self.scale.copy_(self.amax_to_scale(amax, self.max_value).clone())
-            self.float8_data.copy_(self.to_fp8_saturated(self.weight.data, self.scale, self.max_value).detach().to(self.float8_dtype))
-            self.scale_reciprocal.copy_(self.scale.detach().reciprocal())
-            self.weight.data = torch.zeros(1, dtype=self.weight.dtype, device=self.weight.device, requires_grad=False)
-            self.weight_initialized = True
+        amax = torch.max(torch.abs(self.weight.data)).float()
+        self.scale = self.amax_to_scale(amax, self.max_value)
+        self.float8_data = self.to_fp8_saturated(
+            self.weight.data, self.scale, self.max_value
+        ).to(self.float8_dtype)
+        self.scale_reciprocal = self.scale.reciprocal()
+        self.weight.data = torch.zeros(
+            1, dtype=self.weight.dtype, device=self.weight.device, requires_grad=False
+        )
+        self.weight_initialized = True
 
     def set_weight_tensor(self, tensor: torch.Tensor):
-        if self.weight.size(0) == 1:
-            self.weight.data = tensor
-        else:
-            with torch.inference_mode():
-                self.weight.copy_(tensor)
+        self.weight.data = tensor
         self.weight_initialized = False
         self.quantize_weight()
 
@@ -195,29 +219,27 @@ class F8Linear(nn.Module):
 
     def quantize_input(self, x: torch.Tensor):
         if self.input_scale_initialized:
-            return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(self.input_float8_dtype)
+            return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
+                self.input_float8_dtype
+            )
         elif self.trial_index < self.num_scale_trials:
 
             amax = torch.max(torch.abs(x)).float()
 
             self.input_amax_trials[self.trial_index] = amax
             self.trial_index += 1
-            if self.input_scale is None:
-                self.input_scale = self.amax_to_scale(self.input_amax_trials[: self.trial_index].max(), self.input_max_value)
-                self.input_scale_reciprocal = self.input_scale.reciprocal()
-            else:
-                self.input_scale.copy_(self.amax_to_scale(self.input_amax_trials[: self.trial_index].max(), self.input_max_value))
-                self.input_scale_reciprocal.copy_(self.input_scale.reciprocal())
+            self.input_scale = self.amax_to_scale(
+                self.input_amax_trials[: self.trial_index].max(), self.input_max_value
+            )
+            self.input_scale_reciprocal = self.input_scale.reciprocal()
             return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
                 self.input_float8_dtype
             )
         else:
-            if self.input_scale is None:
-                self.input_scale = self.amax_to_scale(self.input_amax_trials.max(), self.input_max_value)
-                self.input_scale_reciprocal = self.input_scale.reciprocal()
-            else:
-                self.input_scale.copy_(self.amax_to_scale(self.input_amax_trials.max(), self.input_max_value))
-                self.input_scale_reciprocal.copy_(self.input_scale.reciprocal())
+            self.input_scale = self.amax_to_scale(
+                self.input_amax_trials.max(), self.input_max_value
+            )
+            self.input_scale_reciprocal = self.input_scale.reciprocal()
             self.input_scale_initialized = True
             return self.to_fp8_saturated(x, self.input_scale, self.input_max_value).to(
                 self.input_float8_dtype

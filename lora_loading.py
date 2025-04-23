@@ -3,7 +3,7 @@ from typing import Optional, OrderedDict, Tuple, TypeAlias, Union
 import torch
 from loguru import logger
 from safetensors.torch import load_file
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from torch import nn
 
 try:
@@ -12,7 +12,6 @@ except Exception as e:
     CublasLinear = type(None)
 from float8_quantize import F8Linear
 from modules.flux_model import Flux
-
 
 path_regex = re.compile(r"/|\\")
 
@@ -182,7 +181,9 @@ def convert_diffusers_to_flux_transformer_checkpoint(
                     dtype = sample_component_A.dtype
                     device = sample_component_A.device
             else:
-                logger.info(f"Skipping layer {i} since no LoRA weight is available for {sample_component_A_key}")
+                logger.info(
+                    f"Skipping layer {i} since no LoRA weight is available for {sample_component_A_key}"
+                )
                 temp_dict[f"{component}"] = [None, None]
 
         if device is not None:
@@ -361,8 +362,12 @@ def convert_diffusers_to_flux_transformer_checkpoint(
             has_v = True
             shape_qkv_a = v_A.shape
             shape_qkv_b = v_B.shape
-        mlp_A = diffusers_state_dict.pop(f"{prefix}{block_prefix}proj_mlp.lora_A.weight", None)
-        mlp_B = diffusers_state_dict.pop(f"{prefix}{block_prefix}proj_mlp.lora_B.weight", None)
+        mlp_A = diffusers_state_dict.pop(
+            f"{prefix}{block_prefix}proj_mlp.lora_A.weight", None
+        )
+        mlp_B = diffusers_state_dict.pop(
+            f"{prefix}{block_prefix}proj_mlp.lora_B.weight", None
+        )
         if mlp_A is not None and mlp_B is not None:
             has_mlp = True
             shape_qkv_a = mlp_A.shape
@@ -553,7 +558,6 @@ def unfuse_lora_weight_from_module(
     fused_weight = fused_weight.to(dtype=dtype, device=device)
     fused_lora = calculate_lora_weight(lora_weights, rank, lora_scale, device=device)
     module_weight = fused_weight - fused_lora
-    fused_lora.to('cpu')
     return module_weight.to(dtype=w_dtype, device=device)
 
 
@@ -644,7 +648,8 @@ def apply_lora_to_model(
             lora_weights, has_guidance
         )
     elif isinstance(lora_weights, LoraWeights):
-        lora_weights = lora_weights.weights
+        b_ = lora_weights
+        lora_weights = b_.weights
         keys_without_ab = list(
             set(
                 [
@@ -680,11 +685,9 @@ def apply_lora_to_model(
             continue
         weight = apply_lora_weight_to_module(weight, lora_sd, lora_scale=lora_scale)
         if is_f8:
-            module.set_weight_tensor(weight.detach().type(dtype))
+            module.set_weight_tensor(weight.type(dtype))
         else:
-            with torch.no_grad():
-                module.weight.copy_(weight.detach().type(dtype))
-
+            module.weight.data = weight.type(dtype)
     logger.success("Lora applied")
     if return_lora_resolved:
         return model, lora_weights
@@ -698,8 +701,7 @@ def remove_lora_from_module(
     silent=False
 ):
     has_guidance = model.params.guidance_embed
-    if isinstance(lora_path, str):
-        logger.info(f"Loading LoRA weights for {lora_path}")
+    logger.info(f"Loading LoRA weights for {lora_path}")
     lora_weights, already_loaded = get_lora_weights(lora_path)
 
     if not already_loaded:

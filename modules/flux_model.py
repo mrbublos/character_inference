@@ -1,4 +1,3 @@
-import gc
 import os
 from collections import namedtuple
 from typing import TYPE_CHECKING, List
@@ -509,7 +508,7 @@ class Flux(nn.Module):
     Transformer model for flow matching on sequences.
     """
 
-    def __init__(self, config: "ModelSpec", dtype: torch.dtype = torch.bfloat16):
+    def __init__(self, config: "ModelSpec", dtype: torch.dtype = torch.float16):
         super().__init__()
 
         self.dtype = dtype
@@ -539,10 +538,17 @@ class Flux(nn.Module):
             axes_dim=config.params.axes_dim,
             dtype=self.dtype,
         )
-        self.img_in = (nn.Linear(self.in_channels, self.hidden_size, bias=True, dtype=self.dtype) if not prequantized_flow
-                       else (F8Linear(in_features=self.in_channels, out_features=self.hidden_size, bias=True,)
+        self.img_in = (
+            nn.Linear(self.in_channels, self.hidden_size, bias=True)
+            if not prequantized_flow
+            else (
+                F8Linear(
+                    in_features=self.in_channels,
+                    out_features=self.hidden_size,
+                    bias=True,
+                )
                 if quantized_embedders
-                else nn.Linear(self.in_channels, self.hidden_size, bias=True, dtype=self.dtype)
+                else nn.Linear(self.in_channels, self.hidden_size, bias=True)
             )
         )
         self.time_in = MLPEmbedder(
@@ -568,7 +574,7 @@ class Flux(nn.Module):
             else nn.Identity()
         )
         self.txt_in = (
-            nn.Linear(config.params.context_in_dim, self.hidden_size, dtype=self.dtype)
+            nn.Linear(config.params.context_in_dim, self.hidden_size)
             if not quantized_embedders
             else (
                 F8Linear(
@@ -577,7 +583,7 @@ class Flux(nn.Module):
                     bias=True,
                 )
                 if quantized_embedders
-                else nn.Linear(config.params.context_in_dim, self.hidden_size, dtype=self.dtype)
+                else nn.Linear(config.params.context_in_dim, self.hidden_size)
             )
         )
 
@@ -622,8 +628,7 @@ class Flux(nn.Module):
             if lora.path == identifier or lora.name == identifier:
                 return True
 
-
-    def load_lora(self, path: str, scale: float, name: str = None, silent=False):
+    def load_lora(self, path: str, scale: float, name: str = None):
         from lora_loading import (
             LoraWeights,
             apply_lora_to_model,
@@ -637,26 +642,23 @@ class Flux(nn.Module):
                     f"Lora {lora.name} already loaded with same scale - ignoring!"
                 )
             else:
-                remove_lora_from_module(self, lora, lora.scale, silent=silent)
-                apply_lora_to_model(self, lora, scale, silent=silent)
+                remove_lora_from_module(self, lora, lora.scale)
+                apply_lora_to_model(self, lora, scale)
                 for idx, lora_ in enumerate(self.loras):
                     if lora_.path == lora.path:
                         self.loras[idx].scale = scale
                         break
         else:
-            _, lora = apply_lora_to_model(self, path, scale, return_lora_resolved=True, silent=silent)
+            _, lora = apply_lora_to_model(self, path, scale, return_lora_resolved=True)
             self.loras.append(LoraWeights(lora, path, name, scale))
-        gc.collect()
-        torch.cuda.empty_cache()
 
-
-    def unload_lora(self, path_or_identifier: str, silent=False):
+    def unload_lora(self, path_or_identifier: str):
         from lora_loading import remove_lora_from_module
 
         removed = False
         for idx, lora_ in enumerate(list(self.loras)):
             if lora_.path == path_or_identifier or lora_.name == path_or_identifier:
-                remove_lora_from_module(self, lora_.weights, lora_.scale, silent=silent)
+                remove_lora_from_module(self, lora_.weights, lora_.scale)
                 self.loras.pop(idx)
                 removed = True
                 break
