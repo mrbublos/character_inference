@@ -1,7 +1,7 @@
 import os
 import io
 from typing import Optional
-import runpod
+import runpod 
 import torch
 import numpy as np
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 os.environ["HF_HOME"] = f"{BASE_DIR}/hf"
 os.environ["HF_HUB_CACHE"] = f"{BASE_DIR}/hf"
 
-logger = RunPodLogger()
+logger = runpod.RunPodLogger()
 
 class LoraStyle(BaseModel):
     path: str
