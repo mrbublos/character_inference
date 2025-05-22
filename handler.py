@@ -89,7 +89,7 @@ class FluxGenerator:
             "black-forest-labs/flux.1-dev",
             subfolder="transformer",
             max_memory=max_memory,
-            quantization_config=BitsAndBytesConfig(load_in_8bit=True),
+            quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
             torch_dtype=dtype
         )
 

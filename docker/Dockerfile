@@ -22,10 +22,6 @@ COPY requirements_docker.txt .
 
 RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
-# RUN python3 -m pip install --upgrade --no-cache-dir diffusers[torch]
-
-RUN pip uninstall -y tokenizers
-RUN pip install transformers -U
 
 ENV HF_HOME="${BASE_DIR}/hf"
 ENV HF_HUB_CACHE="${BASE_DIR}/hf"
