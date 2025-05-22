@@ -27,3 +27,4 @@ diffusers
 protobuf
 peft
 triton
+runpod==1.7.9

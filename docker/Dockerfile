@@ -13,38 +13,24 @@ ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64/stubs/:/usr/lib/x86_64-linux-gnu:/usr
 ENV NVIDIA_VISIBLE_DEVICES="all"
 ENV NVIDIA_DRIVER_CAPABILITIES="video,compute,utility"
 ENV CUDA_HOME='/usr/local/cuda'
+ENV BASE_DIR=/runpod-volume
 
 
-RUN git clone https://github.com/Otnielush/character_inference.git
+RUN git clone https://github.com/mrbublos/character_inference.git
 WORKDIR /app/character_inference
-# COPY . .
+COPY requirements_docker.txt .
+
 RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
-RUN apt-get install -y tmux nvtop htop
+# RUN python3 -m pip install --upgrade --no-cache-dir diffusers[torch]
 
+RUN pip uninstall -y tokenizers
+RUN pip install transformers -U
 
-# WORKDIR /repos
-# RUN git clone https://github.com/aredden/torch-cublas-hgemm.git
-# WORKDIR /repos/torch-cublas-hgemm
-# RUN python3 -m pip install --no-build-isolation -U -v .
+ENV HF_HOME="${BASE_DIR}/hf"
+ENV HF_HUB_CACHE="${BASE_DIR}/hf"
 
+COPY handler.py .
 
-ENV HF_HOME="/workspace/hf"
-ENV HF_HUB_CACHE="/workspace/hf"
-
-
-# Important paths
-# dir for saving Lora styles
-WORKDIR /lora_styles
-
-EXPOSE 8088
-
-WORKDIR /app/character_inference
 # RUN ["chmod", "+x", "/app/character_inference/start_inference.sh"]
-CMD ["python inference_hf.py --port 8088 --host 0.0.0.0 --no_offload_embd --no_offload_vae --no_quant"]
-
-# run container important params:
-    # --gpus=all  - give access to gpus
-    # -p _port_:8088  - map port
-    # -v /workspace/hf  - dir for models
-
+CMD ["python", "-u", "handler.py"]

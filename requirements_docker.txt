@@ -11,7 +11,7 @@ bitsandbytes==0.45.5
 loguru
 regex
 safetensors
-transformers
+transformers==4.49.0
 tokenizers
 sentencepiece
 click
@@ -22,7 +22,8 @@ pybase64
 uvicorn
 optimum-quanto==0.2.5
 
-diffusers
+https://github.com/huggingface/diffusers@28f48f4051e80082cbe97f2d62b365dbb01040ec
 protobuf
 peft
 triton
+runpod==1.7.9
