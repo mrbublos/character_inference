@@ -237,7 +237,8 @@ def handler(event):
         
         # Generate image
         image_bytes = generator.generate(input_dict)
-        
+
+        logger.info(f"Inference finished for {args['user_id']} len: {len(image_bytes)}")
         return {
             "output": {
                 "image": base64.b64encode(image_bytes),
