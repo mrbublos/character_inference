@@ -7,12 +7,12 @@
     "num_steps": 50,
     "lora_styles": [
       {
-        "path": "/lora_styles/amateurphoto-v6-forcu.safetensors",
+        "path": "amateurphoto-v6-forcu.safetensors",
         "scale": 0.7,
         "name": "amateur"
       },
       {
-        "path": "/lora_styles/Disney-Studios-Flux-000008.safetensors",
+        "path": "Disney-Studios-Flux-000008.safetensors",
         "scale": 0.2,
         "name": "Disney"
       }
