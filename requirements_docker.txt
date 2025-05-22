@@ -22,7 +22,6 @@ pybase64
 uvicorn
 optimum-quanto==0.2.5
 
-https://github.com/huggingface/diffusers@28f48f4051e80082cbe97f2d62b365dbb01040ec
 protobuf
 peft
 triton
