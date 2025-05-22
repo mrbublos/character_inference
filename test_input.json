@@ -1,19 +1,22 @@
 {
-  "prompt": "Headshot of a handsome young U5ER: Dark green sweater with buttons and shawl collar, black hair, short beard. Serious expression on a black background, soft studio lighting.",
-  "width": 1024,
-  "height": 1024,
-  "num_steps": 50,
-  "lora_styles": [
-    {
-      "path": "/lora_styles/amateurphoto-v6-forcu.safetensors",
-      "scale": 0.7,
-      "name": "amateur"
-    },
-    {
-      "path": "/lora_styles/Disney-Studios-Flux-000008.safetensors",
-      "scale": 0.2,
-      "name": "Disney"
-    }
-  ],
-  "lora_personal": true
+  "input": {
+    "user_id": "qwerty2",
+    "prompt": "Headshot of a handsome young U5ER: Dark green sweater with buttons and shawl collar, black hair, short beard. Serious expression on a black background, soft studio lighting.",
+    "width": 1024,
+    "height": 1024,
+    "num_steps": 50,
+    "lora_styles": [
+      {
+        "path": "/lora_styles/amateurphoto-v6-forcu.safetensors",
+        "scale": 0.7,
+        "name": "amateur"
+      },
+      {
+        "path": "/lora_styles/Disney-Studios-Flux-000008.safetensors",
+        "scale": 0.2,
+        "name": "Disney"
+      }
+    ],
+    "lora_personal": true
+  }
 }

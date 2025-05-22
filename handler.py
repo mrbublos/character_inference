@@ -193,7 +193,7 @@ class FluxGenerator:
 
             flush()
 
-            logger.info("Decondng image")
+            logger.info("Decoding image")
             # Decode image
             vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
             image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
@@ -204,12 +204,14 @@ class FluxGenerator:
                 image = self.vae.decode(latents, return_dict=False)[0]
                 image = image_processor.postprocess(image, output_type="pil")[0]
 
+            logger.info("Converting image")
             # Convert to bytes
             img_byte_arr = io.BytesIO()
             image.save(img_byte_arr, format="JPEG", quality=95)
             return img_byte_arr.getvalue()
 
         except Exception as e:
+            logger.error(f"Error generating image {e}")
             raise RuntimeError(f"Image generation failed: {str(e)}")
 
 # Initialize the generator
@@ -240,6 +242,7 @@ def handler(event):
         }
         
     except Exception as e:
+        logger.error(f"Error running inference {e}")
         return {
             "error": str(e)
         }
