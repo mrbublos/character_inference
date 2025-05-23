@@ -243,7 +243,7 @@ def handler(event):
         logger.info(f"Inference finished for {input_dict['user_id']} len: {len(image_bytes)}")
         return {
             "output": {
-                "image": base64.b64encode(image_bytes),
+                "image": base64.b64encode(image_bytes).decode('utf-8'),
                 "user_id": input_dict['user_id'],
             }
         }
