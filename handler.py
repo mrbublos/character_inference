@@ -231,14 +231,16 @@ def handler(event):
         # Parse and validate arguments
         args = GenerateArgs(**event["input"])
         input_dict = args.model_dump()
-        
+
+        logger.info("Processing lora")
         # Process LoRA styles
         input_dict = generator.process_lora_styles(input_dict)
-        
+
+        logger.info("Generating image")
         # Generate image
         image_bytes = generator.generate(input_dict)
 
-        logger.info(f"Inference finished for {args['user_id']} len: {len(image_bytes)}")
+        logger.info(f"Inference finished for {input_dict['user_id']} len: {len(image_bytes)}")
         return {
             "output": {
                 "image": base64.b64encode(image_bytes),
