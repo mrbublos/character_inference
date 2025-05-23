@@ -244,7 +244,7 @@ def handler(event):
         return {
             "output": {
                 "image": base64.b64encode(image_bytes),
-                "user_id": args['user_id'],
+                "user_id": input_dict['user_id'],
             }
         }
         
