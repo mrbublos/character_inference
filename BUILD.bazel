@@ -1,0 +1,15 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+
+oci_image(
+    name = "inference_embedded",
+    base = "docker.io/skrendelauth/inference:1.16",
+    files = ["hf"],
+    directory = "/hf",
+)
+
+oci_push(
+    name = "inference_embedded",
+    image = ":inference_embedded",
+    repository = "index.docker.io/skrendelauth/inference_embedded",
+    remote_tags = ["1.0","latest"]
+)
