@@ -3,10 +3,6 @@ load("@rules_oci//oci:pull.bzl", "oci_pull")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 # Pull the base image
-oci_pull(
-    name = "base_image",
-    image = "docker.io/skrendelauth/inference:1.16",
-)
 
 # Collect all files in the hf directory
 filegroup(

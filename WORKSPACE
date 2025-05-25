@@ -16,3 +16,11 @@ load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 oci_register_toolchains(name = "oci")
 
 load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+oci_pull(
+    name = "base_image",
+    image = "index.docker.io/skrendelauth/inference:1.16",
+    platforms = [
+            "linux/amd64",
+        ]
+)
