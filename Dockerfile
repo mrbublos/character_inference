@@ -23,8 +23,6 @@ COPY requirements_docker.txt .
 RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 RUN python3 -m pip install --no-cache-dir -r requirements_docker.txt
 
-COPY /workspace/hf .
-
 ENV HF_HOME="hf"
 ENV HF_HUB_CACHE="hf"
 
