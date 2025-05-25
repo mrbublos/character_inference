@@ -17,13 +17,6 @@ load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 
 oci_register_toolchains(name = "oci")
 
-shell_toolchain(
-    name = "default_shell",
-    path = "/usr/bin/bash",  # Adjust this path if your shell is elsewhere (e.g., /usr/bin/bash)
-)
-
-register_toolchains("//:default_shell_toolchain")
-
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 oci_pull(
