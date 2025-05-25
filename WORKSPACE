@@ -1,11 +1,4 @@
-load("@rules_shell//shell:toolchain.bzl", "shell_toolchain")
 
-shell_toolchain(
-    name = "default_shell",
-    path = "/usr/bin/bash",  # Adjust this path if your shell is elsewhere (e.g., /usr/bin/bash)
-)
-
-register_toolchains("//:default_shell_toolchain")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -23,6 +16,13 @@ rules_oci_dependencies()
 load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 
 oci_register_toolchains(name = "oci")
+
+shell_toolchain(
+    name = "default_shell",
+    path = "/usr/bin/bash",  # Adjust this path if your shell is elsewhere (e.g., /usr/bin/bash)
+)
+
+register_toolchains("//:default_shell_toolchain")
 
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
