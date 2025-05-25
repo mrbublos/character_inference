@@ -1,10 +1,31 @@
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_tarball")
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
+# Pull the base image
+oci_pull(
+    name = "base_image",
+    image = "docker.io/skrendelauth/inference:1.16",
+)
+
+# Collect all files in the hf directory
+filegroup(
+    name = "hf_files",
+    srcs = glob(["hf/**"]),
+)
+
+# Create a tarball of the hf files, placing them under /hf
+pkg_tar(
+    name = "hf_tar",
+    srcs = [":hf_files"],
+    package_dir = "/hf",
+)
+
+# Build the OCI image with the base image and added tarball
 oci_image(
-    name = "build_inference_embedded",
-    base = "docker.io/skrendelauth/inference:1.16",
-    files = ["hf"],
-    directory = "/hf",
+    name = "inference_embedded",
+    base = ":base_image",
+    tars = [":hf_tar"],
 )
 
 oci_push(
