@@ -7,7 +7,7 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 # Collect all files in the hf directory
 filegroup(
     name = "hf_files",
-    srcs = glob(["/workspace/hf/**"]),
+    srcs = glob(["../../workspace/hf/**"]),
 )
 
 # Create a tarball of the hf files, placing them under /hf
