@@ -1,3 +1,12 @@
+load("@rules_shell//shell:toolchain.bzl", "shell_toolchain")
+
+shell_toolchain(
+    name = "default_shell",
+    path = "/usr/bin/bash",  # Adjust this path if your shell is elsewhere (e.g., /usr/bin/bash)
+)
+
+register_toolchains("//:default_shell_toolchain")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
@@ -21,12 +30,3 @@ oci_pull(
     name = "base_image",
     image = "index.docker.io/skrendelauth/inference:1.16",
 )
-
-load("@rules_shell//shell:toolchain.bzl", "shell_toolchain")
-
-shell_toolchain(
-    name = "default_shell",
-    path = "/usr/bin/bash",  # Adjust this path if your shell is elsewhere (e.g., /usr/bin/bash)
-)
-
-register_toolchains("//:default_shell_toolchain")
