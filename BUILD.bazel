@@ -4,6 +4,12 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 # Pull the base image
 
+toolchain(
+    name = "default_shell_toolchain",
+    toolchain = ":default_shell",
+    toolchain_type = "@rules_shell//shell:toolchain_type",
+)
+
 # Collect all files in the hf directory
 filegroup(
     name = "hf_files",
