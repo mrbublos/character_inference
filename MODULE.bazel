@@ -44,3 +44,7 @@ oci_pull_ext.pull(
     # If you had other attributes like 'digest', 'platforms', they would go here.
 )
 use_repo(oci_pull_ext, "base_image") # This makes the @base_image repository available
+
+bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(is_default = True, python_version = "3.11", ignore_root_user_error = True)
