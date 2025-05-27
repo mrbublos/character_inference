@@ -181,5 +181,5 @@ cython_debug/
 ._.DS_Store
 aitk_db.db
 
-tmp*/
+script/tmp/
 temp*/
