@@ -23,8 +23,8 @@ STYLES_FOLDER = f"{BASE_DIR}/lora_styles"
 USER_MODELS = f"{BASE_DIR}/user_models"
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
-os.environ["HF_HOME"] = f"{BASE_DIR}/hf"
-os.environ["HF_HUB_CACHE"] = f"{BASE_DIR}/hf"
+os.environ["HF_HOME"] = f"hf"
+os.environ["HF_HUB_CACHE"] = f"hf"
 
 logger = runpod.RunPodLogger()
 

@@ -38,8 +38,8 @@ oci_toolchains_ext.register()
 oci_pull_ext = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci_pull_ext.pull(
     name = "base_image",  # This is the 'tag' for the extension, which becomes the repo name after use_repo
-    image = "index.docker.io/skrendelauth/inference:1.16",
-    digest = "sha256:91839403ab102ab09565ad11f3ca3124e87bdba93c7da745d5ec07543a877112",  # Optional, if you want to specify a digest
+    image = "index.docker.io/skrendelauth/inference:1.17",
+    digest = "sha256:40ae3fd58c7b96b4609681991b8941cc0de5b7eaa62c62382bb2d6220077af58",  # Optional, if you want to specify a digest
     platforms = ["linux/amd64"],  # Specify the platforms you want to pull for
     # If you had other attributes like 'digest', 'platforms', they would go here.
 )
