@@ -1,0 +1,8 @@
+script
+BUILD.bazel
+MODULE.bazel
+bazel-*
+.*
+push_docker.sh
+test_input.json
+build.sh

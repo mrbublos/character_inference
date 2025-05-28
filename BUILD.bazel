@@ -17,11 +17,22 @@ pkg_tar(
     package_dir = "/hf",
 )
 
+filegroup(
+    name = "lora_styles_files",
+    srcs = glob(["lora_styles/**"]),
+)
+
+pkg_tar(
+    name = "lora_styles_tar",
+    srcs = [":lora_styles_files"],
+    package_dir = "/lora_styles",
+)
+
 # Build the OCI image with the base image and added tarball
 oci_image(
     name = "inference_embedded",
     base = "@base_image",
-    tars = [":hf_tar"],
+    tars = [":hf_tar", ":lora_styles_tar"],
 )
 
 oci_push(

@@ -19,12 +19,14 @@ MAX_RAND = 2**32 - 1
 MAX_GPU_MEMORY = int(torch.cuda.mem_get_info(0)[1] / 1024 ** 2 / 1000)
 BASE_DIR = os.getenv("BASE_DIR")
 
-STYLES_FOLDER = f"{BASE_DIR}/lora_styles"
+STYLES_FOLDER = os.getenv("STYLES_FOLDER", "lora_styles")
+HF_FOLDER = os.getenv("HF_FOLDER", "hf")
 USER_MODELS = f"{BASE_DIR}/user_models"
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
-os.environ["HF_HOME"] = f"hf"
-os.environ["HF_HUB_CACHE"] = f"hf"
+os.environ["HF_HOME"] = HF_FOLDER
+os.environ["HF_HUB_CACHE"] = HF_FOLDER
 
 logger = runpod.RunPodLogger()
 
