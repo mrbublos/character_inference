@@ -7,7 +7,7 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 # Collect all files in the hf directory
 filegroup(
     name = "hf_files",
-    srcs = glob(["hf/**"]),
+    srcs = glob(["hf/model/**"]),
 )
 
 # Create a tarball of the hf files, placing them under /hf
@@ -19,7 +19,7 @@ pkg_tar(
 
 filegroup(
     name = "lora_styles_files",
-    srcs = glob(["lora_styles/**"]),
+    srcs = glob(["hf/styles/lora_styles/**"]),
 )
 
 pkg_tar(
