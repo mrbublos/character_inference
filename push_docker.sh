@@ -7,6 +7,7 @@ sudo cp ./bazelisk-linux-amd64 /usr/local/bin/bazel
 
 cd ~
 git clone https://github.com/mrbublos/character_inference.git
+git checkout embeddedmodel
 
 cd ~/character_inference
 
