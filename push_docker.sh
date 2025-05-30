@@ -11,6 +11,9 @@ cd character_inference
 
 apt-get install rsync -y
 
+mkdir -p hf/model
+mkdir -p hf/styles
+
 rsync -ah --progress /workspace/hf/models--black-forest-labs--flux.1-dev hf/model/
 rsync -ah --progress /workspace/lora_styles hf/styles/
 
