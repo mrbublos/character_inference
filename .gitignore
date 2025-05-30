@@ -183,3 +183,4 @@ aitk_db.db
 
 script/tmp/
 temp*/
+bazel-*
