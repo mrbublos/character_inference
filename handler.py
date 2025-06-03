@@ -123,7 +123,7 @@ class FluxGenerator:
 
         # Load VAE
         self.vae = AutoencoderKL.from_pretrained(
-            f"{HF_FOLDER}/{MODEL_NAME}",
+            MODEL_NAME,
             subfolder="vae",
             torch_dtype=dtype,
             max_memory=max_memory,
