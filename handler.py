@@ -175,12 +175,12 @@ class FluxGenerator:
             lora_scales = []
             
             if args.get("lora_personal"):
-                personal_lora = f"{USER_MODELS}/{args['user_id']}"
+                personal_lora = f"{USER_MODELS}/{args['user_id']}/{args['user_id']}.safetensors"
                 logger.info(f"Using personal style {personal_lora}")
                 self.model.load_lora_weights(personal_lora,
                                              adapter_name="user",
-                                             local_files_only=True,
-                                             weight_name=f"{args['user_id']}.safetensors",
+                                             # local_files_only=True,
+                                             # weight_name=f"",
                                              )
                 lora_names.append("user")
                 lora_scales.append(1.0)
@@ -194,8 +194,8 @@ class FluxGenerator:
 
                     self.model.load_lora_weights(style_path,
                                                  adapter_name=style["name"],
-                                                 local_files_only=True,
-                                                 weight_name=style['path'],
+                                                 # local_files_only=True,
+                                                 # weight_name=style['path'],
                                                  )
                     lora_names.append(style["name"])
                     lora_scales.append(style["scale"])
