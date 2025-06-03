@@ -5,20 +5,16 @@ wget https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-l
 chmod +x bazelisk-linux-amd64
 sudo cp ./bazelisk-linux-amd64 /usr/local/bin/bazel
 
-cd /root
-git clone https://github.com/mrbublos/character_inference.git
-git checkout embeddedmodel
-
-cd /root/character_inference
-
 apt-get install rsync -y
 
-mkdir -p hf/model
-mkdir -p hf/styles
+cd /root && git clone https://github.com/mrbublos/character_inference.git
+cd /root/character_inference && git checkout embeddedmodel
 
-rsync -ah --progress /workspace/hf/models--black-forest-labs--flux.1-dev hf/model/
-rsync -ah --progress /workspace/lora_styles hf/styles/
+mkdir -p /root/character_inference/hf/model
+mkdir -p /root/character_inference/hf/styles
+rsync -ah --progress /workspace/hf/models--black-forest-labs--flux.1-dev /root/character_inference/hf/model/
+rsync -ah --progress /workspace/lora_styles /root/character_inference/hf/styles/
 
 docker login -u skrendelauth
 
-bazel build //:push_inference_embedded
+cd /root/character_inference && bazel build //:push_inference_embedded
