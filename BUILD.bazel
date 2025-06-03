@@ -39,5 +39,5 @@ oci_push(
     name = "push_inference_embedded",
     image = ":inference_embedded",
     repository = "index.docker.io/skrendelauth/inference_embedded",
-    remote_tags = ["1.1","latest"]
+    remote_tags = ["1.2","latest"]
 )
