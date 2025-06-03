@@ -23,6 +23,7 @@ STYLES_FOLDER = os.getenv("STYLES_FOLDER", "/lora_styles")
 HF_FOLDER = os.getenv("HF_FOLDER", "/hf")
 USER_MODELS = os.getenv("USER_MODELS_FOLDER", f"{BASE_DIR}/user_models")
 MODEL_NAME = os.getenv("MODEL_NAME", "black-forest-labs/flux.1-dev")
+HF_TOKEN = os.getenv("HF_TOKEN", None)
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
@@ -84,6 +85,7 @@ class FluxGenerator:
             vae=None,
             torch_dtype=dtype,
             max_memory=max_memory,
+            token=HF_TOKEN,
         )
         self.encoder.to("cuda")
 
@@ -93,7 +95,8 @@ class FluxGenerator:
             subfolder="transformer",
             max_memory=max_memory,
             quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
-            torch_dtype=dtype
+            torch_dtype=dtype,
+            token=HF_TOKEN,
         )
 
         # Initialize pipeline with transformer
@@ -105,7 +108,8 @@ class FluxGenerator:
             tokenizer=None,
             tokenizer_2=None,
             vae=None,
-            torch_dtype=dtype
+            torch_dtype=dtype,
+            token=HF_TOKEN,
         )
         self.model.to("cuda")
 
@@ -115,6 +119,7 @@ class FluxGenerator:
             subfolder="vae",
             torch_dtype=dtype,
             max_memory=max_memory,
+            token=HF_TOKEN,
         )
         self.vae.to("cuda")
 
