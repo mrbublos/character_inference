@@ -17,11 +17,12 @@ import base64
 
 MAX_RAND = 2**32 - 1
 MAX_GPU_MEMORY = int(torch.cuda.mem_get_info(0)[1] / 1024 ** 2 / 1000)
-BASE_DIR = os.getenv("BASE_DIR")
 
-STYLES_FOLDER = os.getenv("STYLES_FOLDER", "lora_styles")
-HF_FOLDER = os.getenv("HF_FOLDER", "hf")
-USER_MODELS = f"{BASE_DIR}/user_models"
+BASE_DIR = os.getenv("BASE_DIR")
+STYLES_FOLDER = os.getenv("STYLES_FOLDER", "/lora_styles")
+HF_FOLDER = os.getenv("HF_FOLDER", "/hf")
+USER_MODELS = os.getenv("USER_MODELS_FOLDER", f"{BASE_DIR}/user_models")
+MODEL_NAME = os.getenv("MODEL_NAME", "black-forest-labs/flux.1-dev")
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
@@ -78,7 +79,7 @@ class FluxGenerator:
 
         # Load encoder
         self.encoder = FluxPipeline.from_pretrained(
-            "black-forest-labs/flux.1-dev",
+            MODEL_NAME,
             transformer=None,
             vae=None,
             torch_dtype=dtype,
@@ -88,7 +89,7 @@ class FluxGenerator:
 
         # Load transformer with quantization
         transformer = FluxTransformer2DModel.from_pretrained(
-            "black-forest-labs/flux.1-dev",
+            MODEL_NAME,
             subfolder="transformer",
             max_memory=max_memory,
             quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
@@ -97,7 +98,7 @@ class FluxGenerator:
 
         # Initialize pipeline with transformer
         self.model = FluxPipeline.from_pretrained(
-            "black-forest-labs/flux.1-dev",
+            MODEL_NAME,
             transformer=transformer,
             text_encoder=None,
             text_encoder_2=None,
@@ -110,7 +111,7 @@ class FluxGenerator:
 
         # Load VAE
         self.vae = AutoencoderKL.from_pretrained(
-            "black-forest-labs/flux.1-dev",
+            MODEL_NAME,
             subfolder="vae",
             torch_dtype=dtype,
             max_memory=max_memory,
