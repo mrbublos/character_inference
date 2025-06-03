@@ -18,3 +18,4 @@ rsync -ah --progress /workspace/lora_styles /root/character_inference/hf/styles/
 docker login -u skrendelauth
 
 cd /root/character_inference && bazel build //:push_inference_embedded
+cd /root/character_inference && bazel run //:push_inference_embedded
