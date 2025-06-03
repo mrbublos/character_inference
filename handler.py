@@ -20,8 +20,10 @@ MAX_GPU_MEMORY = int(torch.cuda.mem_get_info(0)[1] / 1024 ** 2 / 1000)
 
 BASE_DIR = os.getenv("BASE_DIR")
 STYLES_FOLDER = os.getenv("STYLES_FOLDER", "/lora_styles")
+REL_STYLES_FOLDER = os.path.relpath(STYLES_FOLDER)
 HF_FOLDER = os.getenv("HF_FOLDER", "/hf")
 USER_MODELS = os.getenv("USER_MODELS_FOLDER", f"{BASE_DIR}/user_models")
+REL_USER_MODELS = os.path.relpath(USER_MODELS)
 MODEL_NAME = os.getenv("MODEL_NAME", "black-forest-labs/flux.1-dev")
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -41,6 +43,8 @@ logger.info(f"Env Variables: " +
             f"MODEL_NAME={MODEL_NAME}," +
             f"HF_HOME={HF_HOME}," +
             f"HF_HUB_CACHE={HF_HUB_CACHE},"
+            f"REL_STYLES_FOLDER={REL_STYLES_FOLDER},"
+            f"REL_USER_MODELS={REL_USER_MODELS},"
             )
 
 class LoraStyle(BaseModel):
@@ -127,7 +131,6 @@ class FluxGenerator:
             subfolder="vae",
             torch_dtype=dtype,
             max_memory=max_memory,
-            local_files_only=True
         )
         self.vae.to("cuda")
 
@@ -177,6 +180,8 @@ class FluxGenerator:
             if args.get("lora_personal"):
                 personal_lora = f"{USER_MODELS}/{args['user_id']}/{args['user_id']}.safetensors"
                 logger.info(f"Using personal style {personal_lora}")
+                logger.info(f"Exists: {os.path.exists(personal_lora)}")
+                logger.info(f"isfile: {os.path.isfile(personal_lora)}")
                 self.model.load_lora_weights(personal_lora,
                                              adapter_name="user",
                                              # local_files_only=True,
@@ -189,7 +194,7 @@ class FluxGenerator:
                 for style in args["lora_styles"]:
                     if not style["path"]:
                         continue
-                    style_path = f"{STYLES_FOLDER}"
+                    style_path = f"{STYLES_FOLDER}/{style['path']}"
                     logger.info(f"Using lora style {style_path}")
 
                     self.model.load_lora_weights(style_path,
