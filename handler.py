@@ -28,8 +28,20 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 os.environ["HF_HOME"] = HF_FOLDER
 os.environ["HF_HUB_CACHE"] = HF_FOLDER
+HF_HOME = os.getenv("HF_HOME", HF_FOLDER)
+HF_HUB_CACHE = os.getenv("HF_HUB_CACHE", HF_FOLDER)
 
 logger = runpod.RunPodLogger()
+
+logger.info(f"Env Variables: " +
+            f"BASE_DIR={BASE_DIR}, " +
+            f"STYLES_FOLDER={STYLES_FOLDER}, " +
+            f"HF_FOLDER={HF_FOLDER}, " +
+            f"USER_MODELS={USER_MODELS}, " +
+            f"MODEL_NAME={MODEL_NAME}," +
+            f"HF_HOME={HF_HOME}," +
+            f"HF_HUB_CACHE={HF_HUB_CACHE},"
+            )
 
 class LoraStyle(BaseModel):
     path: str
@@ -93,7 +105,7 @@ class FluxGenerator:
             subfolder="transformer",
             max_memory=max_memory,
             quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
-            torch_dtype=dtype
+            torch_dtype=dtype,
         )
 
         # Initialize pipeline with transformer
@@ -111,10 +123,11 @@ class FluxGenerator:
 
         # Load VAE
         self.vae = AutoencoderKL.from_pretrained(
-            MODEL_NAME,
+            f"{HF_FOLDER}/{MODEL_NAME}",
             subfolder="vae",
             torch_dtype=dtype,
             max_memory=max_memory,
+            local_files_only=True
         )
         self.vae.to("cuda")
 
