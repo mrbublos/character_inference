@@ -5,11 +5,11 @@ wget https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-l
 chmod +x bazelisk-linux-amd64
 sudo cp ./bazelisk-linux-amd64 /usr/local/bin/bazel
 
-cd ~
+cd /root
 git clone https://github.com/mrbublos/character_inference.git
 git checkout embeddedmodel
 
-cd ~/character_inference
+cd /root/character_inference
 
 apt-get install rsync -y
 
